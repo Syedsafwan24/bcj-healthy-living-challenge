@@ -1,0 +1,204 @@
+@import "tailwindcss";
+@plugin "tailwindcss-animate";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ------------------------------------------------------------------
+   BCJ Healthy Living Challenge — design tokens
+   Build specification section 9. Palette, contrast and shadcn tokens.
+   ------------------------------------------------------------------ */
+
+@layer base {
+  :root {
+    --radius: 0.625rem;
+
+    /* ---- shadcn/ui semantic tokens, light ---- */
+    --background:             oklch(1 0 0);
+    --foreground:             oklch(0.2191 0.0107 163.80);  /* n-900   */
+    --card:                   oklch(1 0 0);
+    --card-foreground:        oklch(0.2191 0.0107 163.80);
+    --popover:                oklch(1 0 0);
+    --popover-foreground:     oklch(0.2191 0.0107 163.80);
+    --primary:                oklch(0.5367 0.1178 160.45);  /* green-600 */
+    --primary-foreground:     oklch(0.9826 0.0034 174.48);
+    --secondary:              oklch(0.9718 0.0190 162.94);  /* green-50  */
+    --secondary-foreground:   oklch(0.4488 0.0970 161.10);  /* green-700 */
+    --accent:                 oklch(0.9765 0.0220 89.79);   /* gold-50   */
+    --accent-foreground:      oklch(0.5287 0.1065 81.73);   /* gold-700  */
+    --muted:                  oklch(0.9606 0.0050 165.01);  /* n-100     */
+    --muted-foreground:       oklch(0.4608 0.0199 167.73);  /* n-600     */
+    --destructive:            oklch(0.5771 0.2152 27.33);   /* #DC2626   */
+    --destructive-foreground: oklch(0.9826 0.0034 174.48);
+    --border:                 oklch(0.9256 0.0076 164.93);  /* n-200     */
+    --input:                  oklch(0.9256 0.0076 164.93);
+    --ring:                   oklch(0.6244 0.1375 160.02);  /* green-500 */
+
+    /* metric hues, exposed as chart series */
+    --chart-1: oklch(0.7148 0.1257 215.22);  /* water     */
+    --chart-2: oklch(0.7049 0.1867 47.60);   /* steps     */
+    --chart-3: oklch(0.5854 0.2041 277.12);  /* sleep     */
+    --chart-4: oklch(0.7227 0.1920 149.58);  /* nutrition */
+    --chart-5: oklch(0.7090 0.1592 293.54);  /* mind      */
+
+    /* score bands, applied by value rather than by series */
+    --band-low:  oklch(0.6368 0.2078 25.33);
+    --band-mid:  oklch(0.7686 0.1647 70.08);
+    --band-good: oklch(0.7681 0.2044 130.85);
+    --band-high: oklch(0.7227 0.1920 149.58);
+
+    /* sidebar */
+    --sidebar:                    oklch(0.2821 0.0566 166.36); /* green-900 */
+    --sidebar-foreground:         oklch(0.9718 0.0190 162.94);
+    --sidebar-primary:            oklch(0.7931 0.1277 162.48); /* green-300 */
+    --sidebar-primary-foreground: oklch(0.2019 0.0392 168.11);
+    --sidebar-accent:             oklch(0.3666 0.0761 163.00); /* green-800 */
+    --sidebar-accent-foreground:  oklch(0.9335 0.0445 163.83);
+    --sidebar-border:             oklch(0.3666 0.0761 163.00);
+    --sidebar-ring:               oklch(0.7080 0.1453 160.60);
+  }
+
+  .dark {
+    --background:           oklch(0.2019 0.0392 168.11);  /* green-950 */
+    --foreground:           oklch(0.9718 0.0190 162.94);
+    --card:                 oklch(0.2821 0.0566 166.36);  /* green-900 */
+    --card-foreground:      oklch(0.9718 0.0190 162.94);
+    --popover:              oklch(0.2821 0.0566 166.36);
+    --popover-foreground:   oklch(0.9718 0.0190 162.94);
+    --primary:              oklch(0.7931 0.1277 162.48);  /* green-300 */
+    --primary-foreground:   oklch(0.2019 0.0392 168.11);
+    --secondary:            oklch(0.3666 0.0761 163.00);  /* green-800 */
+    --secondary-foreground: oklch(0.9335 0.0445 163.83);
+    --accent:               oklch(0.5287 0.1065 81.73);
+    --accent-foreground:    oklch(0.9765 0.0220 89.79);
+    --muted:                oklch(0.3666 0.0761 163.00);
+    --muted-foreground:     oklch(0.8719 0.0847 164.00);  /* green-200 */
+    --destructive:          oklch(0.5771 0.2152 27.33);
+    --destructive-foreground: oklch(0.9826 0.0034 174.48);
+    --border:               oklch(0.3666 0.0761 163.00);
+    --input:                oklch(0.3666 0.0761 163.00);
+    --ring:                 oklch(0.7080 0.1453 160.60);  /* green-400 */
+
+    --sidebar:                    oklch(0.2019 0.0392 168.11);
+    --sidebar-foreground:         oklch(0.9718 0.0190 162.94);
+    --sidebar-primary:            oklch(0.7931 0.1277 162.48);
+    --sidebar-primary-foreground: oklch(0.2019 0.0392 168.11);
+    --sidebar-accent:             oklch(0.3666 0.0761 163.00);
+    --sidebar-accent-foreground:  oklch(0.9335 0.0445 163.83);
+    --sidebar-border:             oklch(0.3666 0.0761 163.00);
+    --sidebar-ring:               oklch(0.7080 0.1453 160.60);
+  }
+}
+
+@theme inline {
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* ---- primary scale, vitality green (section 9.1) ---- */
+  --color-green-50:  oklch(0.9718 0.0190 162.94);
+  --color-green-100: oklch(0.9335 0.0445 163.83);
+  --color-green-200: oklch(0.8719 0.0847 164.00);
+  --color-green-300: oklch(0.7931 0.1277 162.48);
+  --color-green-400: oklch(0.7080 0.1453 160.60);
+  --color-green-500: oklch(0.6244 0.1375 160.02);
+  --color-green-600: oklch(0.5367 0.1178 160.45);
+  --color-green-700: oklch(0.4488 0.0970 161.10);
+  --color-green-800: oklch(0.3666 0.0761 163.00);
+  --color-green-900: oklch(0.2821 0.0566 166.36);  /* BCJ brand colour */
+  --color-green-950: oklch(0.2019 0.0392 168.11);
+
+  /* ---- neutrals, slight green cast ---- */
+  --color-n-50:  #F7FAF9;
+  --color-n-100: #EFF3F1;
+  --color-n-200: #E2E8E5;
+  --color-n-300: #CBD5D0;
+  --color-n-400: #9AA8A2;
+  --color-n-500: #6B7B74;
+  --color-n-600: #4E5C56;
+  --color-n-700: #3A4640;
+  --color-n-800: #232C28;
+  --color-n-900: #161C19;
+  --color-n-950: #0A0E0C;
+
+  /* ---- metric hues ---- */
+  --color-metric-water:     oklch(0.7148 0.1257 215.22);  /* #06B6D4 */
+  --color-metric-water-ink: #0E7490;   /* 5.36:1 with white, for filled controls */
+  --color-metric-steps:     oklch(0.7049 0.1867 47.60);   /* #F97316 */
+  --color-metric-sleep:     oklch(0.5854 0.2041 277.12);  /* #6366F1 */
+  --color-metric-nutrition: oklch(0.7227 0.1920 149.58);  /* #22C55E */
+  --color-metric-mind:      oklch(0.7090 0.1592 293.54);  /* #A78BFA */
+  --color-metric-vitals:    oklch(0.6450 0.2154 16.44);   /* #F43F5E */
+
+  /* ---- score bands ---- */
+  --color-band-low:  var(--band-low);
+  --color-band-mid:  var(--band-mid);
+  --color-band-good: var(--band-good);
+  --color-band-high: var(--band-high);
+
+  /* ---- gold, top three leaderboard places only ---- */
+  --color-gold-50:  #FDF7E7;
+  --color-gold-300: #EFCB6A;
+  --color-gold-500: #D4A017;
+  --color-gold-700: #8A6408;
+
+  /* ---- semantic ---- */
+  --color-success: #22C55E;
+  --color-warning: #F59E0B;
+  --color-danger:  #DC2626;
+  --color-info:    #06B6D4;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  }
+}
+
+/* Section 9.4. Applied to every score, percentage, point counter,
+   rank and step count so digits do not change column width. */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
