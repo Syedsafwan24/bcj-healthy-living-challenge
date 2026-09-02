@@ -36,6 +36,18 @@ async function main() {
   console.log("  from:     ", env.emailFrom);
   console.log();
 
+  // The sign-in link every registration email carries. A working transport
+  // that mails out a localhost link is still a broken launch, and this is
+  // the only place it is visible before a real participant receives one.
+  console.log("Links in emails will point at");
+  console.log(`  ${env.appUrl}/login`);
+  if (env.appUrl.includes("localhost")) {
+    console.log(
+      "  ^ localhost. Set NEXT_PUBLIC_APP_URL before sending real mail.",
+    );
+  }
+  console.log();
+
   const result = await verifyTransport();
 
   if (!result.ok) {

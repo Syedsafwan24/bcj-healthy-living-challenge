@@ -30,8 +30,29 @@ export const env = {
   get totpIssuer() {
     return process.env.TOTP_ISSUER ?? "BCJ Challenge";
   },
+  /**
+   * The site's own absolute URL, e.g. https://health.bcjed.com.
+   *
+   * Every link BCJ sends anyone is built from this: the sign-in link in a
+   * registration email, the recovered-ID email, an organiser invitation. It
+   * is the one setting that is silently useless when wrong — the app runs
+   * perfectly and every email points somewhere nobody can reach — so an
+   * unset value in production is reported rather than quietly replaced with
+   * localhost.
+   *
+   * Trailing slashes are stripped, because callers append "/login".
+   */
   get appUrl() {
-    return process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+    const configured = process.env.NEXT_PUBLIC_APP_URL?.trim();
+    if (configured) return configured.replace(/\/+$/, "");
+
+    if (process.env.NODE_ENV === "production") {
+      console.error(
+        "[env] NEXT_PUBLIC_APP_URL is not set. Every link in every email " +
+          "will point at localhost. Set it to the site's own address.",
+      );
+    }
+    return "http://localhost:3000";
   },
   /* ---- SMTP, the mail transport (specification section 6 names Resend;
      BCJ chose SMTP on their own domain instead) ---- */

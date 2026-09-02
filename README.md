@@ -58,7 +58,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 | `SESSION_SECRET` | Signs the participant and admin session cookies |
 | `TOTP_ENCRYPTION_KEY` | 32 bytes, base64. AES-256-GCM key for admin TOTP secrets |
 | `TOTP_ISSUER` | Label shown in the authenticator app |
-| `NEXT_PUBLIC_APP_URL` | Absolute URL, used in emails |
+| `NEXT_PUBLIC_APP_URL` | The site's own absolute URL, no trailing slash. Production is `https://health.bcjed.com`. Every link in every email is built from it, and an unset value in production is logged rather than silently replaced with localhost |
 | `SMTP_HOST` | Mail host, e.g. `smtp.gmail.com`. Leave blank in development: mail is logged instead of sent |
 | `SMTP_PORT` | `465` for implicit TLS, `587` for STARTTLS |
 | `SMTP_USER` / `SMTP_PASSWORD` | Mailbox credentials. Gmail and most hosts need an **app password**, not the account password |

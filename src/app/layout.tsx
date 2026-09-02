@@ -2,12 +2,16 @@ import type { Metadata, Viewport } from "next";
 
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { env } from "@/lib/env";
 import { cn } from "@/lib/utils";
 
 import { inter, mono } from "./fonts";
 import "./globals.css";
 
 export const metadata: Metadata = {
+  // Without this Next resolves canonical and Open Graph URLs against
+  // localhost, so a shared link previews as a broken local address.
+  metadataBase: new URL(env.appUrl),
   title: {
     default: "BCJ Healthy Living Challenge",
     template: "%s · BCJ Healthy Living Challenge",
