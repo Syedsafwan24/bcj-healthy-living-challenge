@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, asc, count, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, inArray, lte, ne, sql } from "drizzle-orm";
 import type { SQL, SQLWrapper } from "drizzle-orm";
 
 import { db } from "@/db";
@@ -14,7 +14,7 @@ import {
   type DailyEntry,
   type Settings,
 } from "@/db/schema";
-import { addDays, datesInWeek, type IsoDate } from "@/lib/dates";
+import { addDays, datesInWeek, daysBetween, type IsoDate } from "@/lib/dates";
 import type { EntryInputs } from "@/lib/scoring";
 import {
   ENTRIES_SORT,
@@ -652,3 +652,75 @@ export function competitionDates(row: Settings): IsoDate[] {
 }
 
 export { desc };
+
+/**
+ * How many days of the challenge so far the participant has nothing recorded
+ * for, and the most recent one.
+ *
+ * Today is never counted: the day is not over, and telling someone they have
+ * "missed" a day they can still fill in would be both wrong and discouraging.
+ * Days before the challenge started and after today are outside the range.
+ *
+ * Counted as elapsed-minus-recorded rather than by listing every date, so it
+ * stays one query whether the challenge is on day 3 or day 84. A "missing"
+ * row is one the nightly job wrote for a day nobody filled in, so it counts
+ * as missed just as an absent row does.
+ */
+export async function getMissedDays(
+  settings: Settings,
+  participantId: string,
+  today: IsoDate,
+): Promise<{ count: number; lastMissed: IsoDate | null }> {
+  const firstDay = settings.startDate as IsoDate;
+  const lastDay = addDays(firstDay, settings.totalWeeks * 7 - 1);
+
+  // Yesterday, or the last day of the challenge if that came first.
+  const yesterday = addDays(today, -1);
+  const through = yesterday < lastDay ? yesterday : lastDay;
+
+  const elapsed = daysBetween(firstDay, through) + 1;
+  if (elapsed <= 0) return { count: 0, lastMissed: null };
+
+  const [row] = await db
+    .select({
+      recorded: count(),
+      newest: sql<string | null>`max(${dailyEntries.entryDate})`,
+    })
+    .from(dailyEntries)
+    .where(
+      and(
+        eq(dailyEntries.participantId, participantId),
+        ne(dailyEntries.status, "missing"),
+        lte(dailyEntries.entryDate, through),
+        gte(dailyEntries.entryDate, firstDay),
+      ),
+    );
+
+  const missed = elapsed - Number(row?.recorded ?? 0);
+  if (missed <= 0) return { count: 0, lastMissed: null };
+
+  // The newest unrecorded day: walk back from `through` past anything filled
+  // in. At most a handful of rows, and only when something is actually
+  // missing.
+  const filled = new Set(
+    (
+      await db
+        .select({ entryDate: dailyEntries.entryDate })
+        .from(dailyEntries)
+        .where(
+          and(
+            eq(dailyEntries.participantId, participantId),
+            ne(dailyEntries.status, "missing"),
+            lte(dailyEntries.entryDate, through),
+          ),
+        )
+        .orderBy(desc(dailyEntries.entryDate))
+        .limit(40)
+    ).map((r) => r.entryDate),
+  );
+
+  let cursor: IsoDate = through;
+  while (filled.has(cursor) && cursor > firstDay) cursor = addDays(cursor, -1);
+
+  return { count: missed, lastMissed: filled.has(cursor) ? null : cursor };
+}

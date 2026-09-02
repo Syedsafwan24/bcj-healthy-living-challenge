@@ -20,6 +20,29 @@ export const metadata: Metadata = {
     "The 12-week healthy lifestyle challenge run by Bhatkal Community Jeddah. Log your day, follow your score and see the leaderboard.",
   applicationName: "BCJ Healthy Living Challenge",
   formatDetection: { telephone: false },
+
+  // Without these, a link pasted into WhatsApp or Slack shows nothing but the
+  // bare hostname. The <meta name="description"> Next writes from the field
+  // above is not what those readers look at — they read og:*.
+  //
+  // The card itself is src/app/opengraph-image.png, which Next picks up by
+  // filename and turns into og:image and its dimensions. Regenerate it with
+  // `npm run og:build`.
+  openGraph: {
+    type: "website",
+    siteName: "BCJ Healthy Living Challenge",
+    title: "BCJ Healthy Living Challenge",
+    description:
+      "Twelve weeks of small daily habits, run by Bhatkal Community Jeddah. Fill in your day in under a minute and watch your score build.",
+    url: "/",
+    locale: "en_GB",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "BCJ Healthy Living Challenge",
+    description:
+      "Twelve weeks of small daily habits, run by Bhatkal Community Jeddah.",
+  },
 };
 
 export const viewport: Viewport = {

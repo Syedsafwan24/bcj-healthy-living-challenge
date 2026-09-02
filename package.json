@@ -15,7 +15,8 @@
     "db:seed": "tsx src/db/seed.ts",
     "test:integration": "vitest run src/lib/scoring-save.integration.test.ts",
     "test:e2e": "tsx scripts/e2e-smoke.ts",
-    "mail:test": "tsx scripts/mail-test.ts"
+    "mail:test": "tsx scripts/mail-test.ts",
+    "og:build": "tsx scripts/make-og-image.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",

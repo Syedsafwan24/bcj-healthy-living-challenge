@@ -10,7 +10,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { requireParticipant } from "@/lib/auth/guards";
 import { formatIsoDateLong, weekNoFor, type IsoDate } from "@/lib/dates";
-import { getEntry, getFinalScore, getParticipantProfile, getWeeklyScores } from "@/lib/queries";
+import {
+  getEntry,
+  getFinalScore,
+  getMissedDays,
+  getParticipantProfile,
+  getWeeklyScores,
+} from "@/lib/queries";
 import { activeChallengesForWeek } from "@/lib/scoring";
 import {
   competitionClock,
@@ -68,11 +74,12 @@ export default async function TodayPage({
   // Derived from the entry's own date, never from today (section 4.2).
   const weekNo = weekNoFor(clock.firstDay, entryDate);
 
-  const [entry, profile, weekly, final] = await Promise.all([
+  const [entry, profile, weekly, final, missed] = await Promise.all([
     getEntry(session.participantId, entryDate),
     getParticipantProfile(session.participantId),
     getWeeklyScores(session.participantId),
     getFinalScore(session.participantId),
+    getMissedDays(settings, session.participantId, clock.today),
   ]);
 
   const activeChallenges = activeChallengesForWeek(weekNo, settings.maxActiveWeek);
@@ -105,6 +112,11 @@ export default async function TodayPage({
   const thisWeek = weekly.find((w) => w.weekNo === weekNo);
   const isToday = entryDate === clock.today;
 
+  // The name people actually go by. Falls back to the display name, and then
+  // to nothing at all rather than greeting somebody as "undefined".
+  const firstName =
+    profile?.fullName?.trim().split(/\s+/)[0] || profile?.displayName?.trim() || "";
+
   return (
     <div className="space-y-6">
       {/* ---- header ---- */}
@@ -128,7 +140,11 @@ export default async function TodayPage({
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-              {isToday ? "Today" : formatIsoDateLong(entryDate)}
+              {isToday
+                ? firstName
+                  ? `Welcome back, ${firstName}`
+                  : "Today"
+                : formatIsoDateLong(entryDate)}
             </h1>
             {isToday && (
               <p className="mt-1 text-sm text-muted-foreground">
@@ -143,6 +159,44 @@ export default async function TodayPage({
           )}
         </div>
       </header>
+
+      {/* ---- days left behind ----
+          Shown only on today's screen, and only about days already past.
+          Today is never counted as missed: the day is not over, and telling
+          someone they have missed a day they are looking at would be wrong.
+          Because any day stays open until the challenge ends, this is an
+          invitation to go back rather than a reprimand. */}
+      {isToday && missed.count > 0 && (
+        <Alert>
+          <CalendarClock className="size-4" />
+          <AlertTitle>
+            {missed.count === 1
+              ? "One day is still empty"
+              : `${missed.count} days are still empty`}
+          </AlertTitle>
+          <AlertDescription className="space-y-3">
+            <p>
+              {missed.lastMissed
+                ? `You have nothing recorded for ${formatIsoDateLong(missed.lastMissed)}${
+                    missed.count > 1 ? ", and earlier days too" : ""
+                  }. Those days score 0% until you fill them in, and you can still do that any time before the challenge ends.`
+                : "Those days score 0% until you fill them in, and you can still do that any time before the challenge ends."}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {missed.lastMissed && (
+                <Button asChild size="sm" variant="outline" className="h-11">
+                  <Link href={`/app?date=${missed.lastMissed}`}>
+                    Fill in {formatIsoDateLong(missed.lastMissed)}
+                  </Link>
+                </Button>
+              )}
+              <Button asChild size="sm" variant="ghost" className="h-11">
+                <Link href="/app/history">See all my days</Link>
+              </Button>
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* ---- submission status banner — section 9.5 ---- */}
       <SubmissionBanner
