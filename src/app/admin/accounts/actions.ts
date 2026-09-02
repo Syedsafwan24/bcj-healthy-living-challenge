@@ -166,7 +166,7 @@ export async function inviteAdmin(
 
   revalidatePath("/admin/accounts");
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://health.bcjed.com";
   return {
     ok: true,
     message: delivery.sent

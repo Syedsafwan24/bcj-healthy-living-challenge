@@ -156,7 +156,7 @@ async function main() {
         inviteExpiresAt: sql`now() + interval '48 hours'`,
       });
 
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://health.bcjed.com";
       console.log(
         `\nFirst super admin invited: ${email}\n` +
           `Open this link within 48 hours to set a password and enrol TOTP:\n\n` +

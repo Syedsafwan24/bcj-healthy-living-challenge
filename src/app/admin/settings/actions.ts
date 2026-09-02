@@ -20,6 +20,7 @@ import { CHALLENGES } from "@/lib/challenges";
 import { recomputeAll } from "@/lib/scoring-save";
 import { getSettings } from "@/lib/settings";
 import { fieldErrors, reauthSchema, settingsSchema } from "@/lib/validation";
+import { RESET_PHRASE } from "./constants";
 
 /**
  * Competition settings — build specification sections 5.2, 7 and 11.
@@ -253,9 +254,6 @@ export async function unlockRules(
 /* ------------------------------------------------------------------ */
 /* End of season — clearing the competition for the next year          */
 /* ------------------------------------------------------------------ */
-
-/** Typed by hand before anything is deleted. Not a word anyone types twice. */
-export const RESET_PHRASE = "CLEAR ALL RECORDS";
 
 /**
  * Clears one year's competition so the same installation can run the next.

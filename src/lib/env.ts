@@ -52,7 +52,7 @@ export const env = {
           "will point at localhost. Set it to the site's own address.",
       );
     }
-    return "http://localhost:3000";
+    return "https://health.bcjed.com";
   },
   /* ---- SMTP, the mail transport (specification section 6 names Resend;
      BCJ chose SMTP on their own domain instead) ---- */

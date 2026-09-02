@@ -22,7 +22,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
-import { RESET_PHRASE, resetCompetition, type SettingsState } from "./actions";
+import { resetCompetition, type SettingsState } from "./actions";
+import { RESET_PHRASE } from "./constants";
 
 /**
  * End of season. Clears one year's competition so the same installation runs
