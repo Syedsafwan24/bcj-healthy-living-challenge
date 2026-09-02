@@ -10,7 +10,11 @@ import { formatIsoDateLong } from "@/lib/dates";
 import { dailyMaxForWeek } from "@/lib/scoring";
 import { env } from "@/lib/env";
 import { competitionClock, getSettings } from "@/lib/settings";
+import { db } from "@/db";
+import { participants } from "@/db/schema";
+import { count } from "drizzle-orm";
 
+import { ResetControls } from "./reset-controls";
 import { LockControls, SettingsForm } from "./settings-form";
 
 export const metadata: Metadata = { title: "Settings" };
@@ -23,6 +27,9 @@ export const dynamic = "force-dynamic";
 export default async function SettingsPage() {
   await requireAdmin();
   const settings = await getSettings();
+  const [{ value: participantCount }] = await db
+    .select({ value: count() })
+    .from(participants);
   const clock = competitionClock(settings);
 
   return (
@@ -74,6 +81,11 @@ export default async function SettingsPage() {
       <LockControls
         locked={settings.rulesLocked}
         requireTotp={env.adminRequireTotp}
+      />
+
+      <ResetControls
+        requireTotp={env.adminRequireTotp}
+        participantCount={participantCount}
       />
 
       {/* ---- what the current settings mean ---- */}

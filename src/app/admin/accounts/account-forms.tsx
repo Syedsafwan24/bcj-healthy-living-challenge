@@ -24,6 +24,7 @@ import { Input } from "@/components/ui/input";
 
 import {
   inviteAdmin,
+  deleteAdmin,
   setAdminStatus,
   unlockAdmin,
   type AccountState,
@@ -195,13 +196,17 @@ export function AccountRowActions({
     unlockAdmin,
     null,
   );
+  const [deleteState, deleteAction] = useActionState<AccountState | null, FormData>(
+    deleteAdmin,
+    null,
+  );
 
   useEffect(() => {
-    for (const state of [statusState, unlockState]) {
+    for (const state of [statusState, unlockState, deleteState]) {
       if (state?.ok && state.message) toast.success(state.message);
       if (state?.error) toast.error(state.error);
     }
-  }, [statusState, unlockState]);
+  }, [statusState, unlockState, deleteState]);
 
   return (
     <div className="flex flex-wrap justify-end gap-2">
@@ -283,6 +288,45 @@ export function AccountRowActions({
               <AlertDialogFooter>
                 <AlertDialogCancel type="button">Cancel</AlertDialogCancel>
                 <AlertDialogAction type="submit">Re-enable</AlertDialogAction>
+              </AlertDialogFooter>
+            </form>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
+
+      {/* Deleting is offered only once an account is disabled, so removal is
+          always two deliberate steps and there is a way back until the last
+          one. Your own account is never deletable from here. */}
+      {status === "disabled" && !isSelf && (
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button size="sm" variant="outline" className="h-11 text-destructive">
+              Delete
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <form action={deleteAction}>
+              <input type="hidden" name="adminId" value={adminId} />
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete {email}?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  The account is removed for good and cannot be re-enabled. What
+                  this organiser did stays in the audit history, recorded
+                  against their name. Confirm with your own password
+                  {requireTotp ? " and authenticator code" : ""}.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <div className="py-4">
+                <ReauthFields prefix={`delete-${adminId}`} requireTotp={requireTotp} />
+              </div>
+              <AlertDialogFooter>
+                <AlertDialogCancel type="button">Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  type="submit"
+                  className="bg-destructive text-white hover:bg-destructive/90"
+                >
+                  Delete the account
+                </AlertDialogAction>
               </AlertDialogFooter>
             </form>
           </AlertDialogContent>

@@ -1,10 +1,17 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { eq } from "drizzle-orm";
+import { count, eq, sql } from "drizzle-orm";
 
 import { db } from "@/db";
-import { settings } from "@/db/schema";
+import {
+  auditLog,
+  dailyEntries,
+  finalScores,
+  participants,
+  settings,
+  weeklyScores,
+} from "@/db/schema";
 import { recordAudit, recordFieldChanges } from "@/lib/audit";
 import { verifyReauth } from "@/lib/auth/admin-auth";
 import { requireAdmin } from "@/lib/auth/guards";
@@ -240,5 +247,145 @@ export async function unlockRules(
     ok: true,
     message:
       "Scoring rules unlocked. V6 section 8 expects a formal approval behind this — lock them again as soon as the change is made.",
+  };
+}
+
+/* ------------------------------------------------------------------ */
+/* End of season — clearing the competition for the next year          */
+/* ------------------------------------------------------------------ */
+
+/** Typed by hand before anything is deleted. Not a word anyone types twice. */
+export const RESET_PHRASE = "CLEAR ALL RECORDS";
+
+/**
+ * Clears one year's competition so the same installation can run the next.
+ *
+ * Removed: every participant, and with them their health record, daily
+ * entries, weekly scores, final score and any live session. The registration
+ * sequence goes back to 1, so next year's first participant is BCJ0001 rather
+ * than carrying on from wherever the last year stopped.
+ *
+ * Kept, deliberately:
+ *
+ *   Organiser accounts — the people running it are the same people, and this
+ *   would otherwise lock BCJ out of its own installation.
+ *
+ *   Diet categories — the weight bands are the challenge's own reference data,
+ *   not one year's results.
+ *
+ *   The audit history — this is a record of who changed what, and a reset is
+ *   exactly the moment someone might want it gone. Deleting it here would
+ *   make the audit log worthless, since anything it recorded could be erased
+ *   by the person it recorded. The rows that pointed at deleted participants
+ *   are detached, not removed, and the reset itself is written to it with the
+ *   counts of everything destroyed.
+ *
+ * The scoring rules are unlocked, because the next thing anyone does after
+ * this is set next year's start date, which rules_locked forbids.
+ *
+ * Guarded by re-authentication and a typed phrase. There is no undo, so the
+ * only real protection is a restorable database backup — the UI says so.
+ */
+export async function resetCompetition(
+  _prev: SettingsState | null,
+  formData: FormData,
+): Promise<SettingsState> {
+  const admin = await requireAdmin();
+
+  if (String(formData.get("confirm") ?? "").trim() !== RESET_PHRASE) {
+    return {
+      ok: false,
+      errors: { confirm: `Type ${RESET_PHRASE} exactly to confirm.` },
+    };
+  }
+
+  const parsed = reauthSchema.safeParse({
+    password: formData.get("password"),
+    totp: formData.get("totp"),
+  });
+  if (!parsed.success) {
+    return { ok: false, errors: fieldErrors(parsed.error) };
+  }
+
+  const verified = await verifyReauth(
+    admin.adminId,
+    parsed.data.password,
+    parsed.data.totp,
+  );
+  const ip = await requestIp();
+
+  if (!verified) {
+    await recordAudit({
+      action: "admin.login_failed",
+      entityType: "admin",
+      entityId: admin.adminId,
+      actorAdminId: admin.adminId,
+      reason: "Re-authentication failed while clearing the competition",
+      ip,
+    });
+    return {
+      ok: false,
+      error: "Those details were not accepted. Nothing has been deleted.",
+    };
+  }
+
+  // Counted before the delete, so the audit entry says what was destroyed.
+  const [[people], [entries], [weeks], [finals]] = await Promise.all([
+    db.select({ value: count() }).from(participants),
+    db.select({ value: count() }).from(dailyEntries),
+    db.select({ value: count() }).from(weeklyScores),
+    db.select({ value: count() }).from(finalScores),
+  ]);
+
+  if (people.value === 0) {
+    return { ok: false, error: "There are no participants to clear." };
+  }
+
+  await recordAudit({
+    action: "admin.reauthenticated",
+    entityType: "admin",
+    entityId: admin.adminId,
+    actorAdminId: admin.adminId,
+    reason: "Clearing the competition records",
+    ip,
+  });
+
+  await db.transaction(async (tx) => {
+    // audit_log.actor_participant_id references participants without a
+    // cascade, so the history is detached rather than blocking the delete.
+    await tx
+      .update(auditLog)
+      .set({ actorParticipantId: null })
+      .where(sql`${auditLog.actorParticipantId} IS NOT NULL`);
+
+    // Health records, daily entries, weekly and final scores and participant
+    // sessions all cascade from this one delete.
+    await tx.delete(participants);
+
+    // Next year starts at BCJ0001 again.
+    await tx.execute(sql`SELECT setval('participant_seq', 1, false)`);
+
+    // The next thing anyone does is set next year's start date.
+    await tx.update(settings).set({ rulesLocked: false }).where(eq(settings.id, 1));
+  });
+
+  await recordAudit({
+    action: "competition.reset",
+    entityType: "settings",
+    actorAdminId: admin.adminId,
+    oldValue: `${people.value} participants, ${entries.value} daily entries, ${weeks.value} weekly scores, ${finals.value} final scores`,
+    newValue: "cleared; registration numbering reset to 1; scoring rules unlocked",
+    reason: String(formData.get("reason") ?? "").trim() || "End of season reset",
+    ip,
+  });
+
+  revalidatePath("/admin", "layout");
+
+  return {
+    ok: true,
+    message:
+      `Cleared ${people.value} participant${people.value === 1 ? "" : "s"} and ` +
+      `${entries.value} recorded day${entries.value === 1 ? "" : "s"}. ` +
+      "Organiser accounts, diet categories and the audit history are untouched.",
   };
 }

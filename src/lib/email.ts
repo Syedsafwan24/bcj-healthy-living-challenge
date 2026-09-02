@@ -173,11 +173,25 @@ function layout(heading: string, body: string): string {
       ${body}
     </td></tr>
     <tr><td style="padding:16px 24px;background:#F7FAF9;color:#4E5C56;font-size:12px;line-height:1.6">
-      Bhatkal Community Jeddah · <a href="https://bcjed.com" style="color:${ACCENT}">bcjed.com</a><br>
+      Bhatkal Community Jeddah · <a href="${env.appUrl}" style="color:${ACCENT}">${appHost()}</a><br>
       This message was sent because someone registered this address for the 12-week challenge.
     </td></tr>
   </table>
 </body></html>`;
+}
+
+/**
+ * The site's own hostname, for the email footer.
+ *
+ * Derived from NEXT_PUBLIC_APP_URL rather than written in, so moving the app
+ * to a new address does not leave every email pointing at the old one.
+ */
+function appHost(): string {
+  try {
+    return new URL(env.appUrl).host;
+  } catch {
+    return env.appUrl;
+  }
 }
 
 function idBlock(registrationId: string): string {

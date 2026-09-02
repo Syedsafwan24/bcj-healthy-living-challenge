@@ -5,7 +5,7 @@ import { randomBytes } from "node:crypto";
 import { eq, sql } from "drizzle-orm";
 
 import { db } from "@/db";
-import { admins } from "@/db/schema";
+import { admins, auditLog, sessions } from "@/db/schema";
 import { recordAudit } from "@/lib/audit";
 import {
   INVITE_HOURS,
@@ -271,4 +271,89 @@ export async function unlockAdmin(
 
   revalidatePath("/admin/accounts");
   return { ok: true, message: "Lockout cleared." };
+}
+
+/**
+ * Removes a disabled organiser account outright.
+ *
+ * Only a disabled account can be deleted, so removal is always two deliberate
+ * steps: disable, then delete. That ordering also means the "last active
+ * organiser" guard on disabling cannot be walked around by deleting instead,
+ * and it gives an obvious way back — re-enable — right up until the moment
+ * someone chooses to remove the row.
+ *
+ * Deleting is for an account created by mistake or a volunteer who has left.
+ * The audit history keeps every action they took: audit rows reference the
+ * admin id, so those are detached first rather than being deleted with the
+ * account. What an organiser did to a participant's score outlives their
+ * account, which is the point of an audit log (V6 section 8).
+ */
+export async function deleteAdmin(
+  _prev: AccountState | null,
+  formData: FormData,
+): Promise<AccountState> {
+  const admin = await requireAdmin();
+  const targetId = String(formData.get("adminId") ?? "");
+
+  if (targetId === admin.adminId) {
+    return { ok: false, error: "You cannot delete the account you are signed in with." };
+  }
+
+  const reauth = await reauthenticate(
+    admin.adminId,
+    formData,
+    "Deleting an organiser",
+  );
+  if (!reauth.ok) return reauth.state;
+
+  const [target] = await db
+    .select({ id: admins.id, email: admins.email, name: admins.name, status: admins.status })
+    .from(admins)
+    .where(eq(admins.id, targetId))
+    .limit(1);
+
+  if (!target) return { ok: false, error: "That account no longer exists." };
+
+  if (target.status === "active") {
+    return {
+      ok: false,
+      error:
+        "Disable this account first. Deleting an active organiser in one step is too easy to do by accident.",
+    };
+  }
+
+  const ip = await requestIp();
+
+  // Written before the row goes, with the details inline, because the audit
+  // entry has to still make sense once there is no account to look up.
+  await recordAudit({
+    action: "admin.deleted",
+    entityType: "admin",
+    entityId: target.id,
+    actorAdminId: admin.adminId,
+    oldValue: `${target.name} <${target.email}>`,
+    reason: "Organiser account deleted",
+    ip,
+  });
+
+  await db.transaction(async (tx) => {
+    // audit_log.actor_admin_id references admins without ON DELETE, so the
+    // history is detached rather than dragged down with the account.
+    await tx
+      .update(auditLog)
+      .set({ actorAdminId: null })
+      .where(eq(auditLog.actorAdminId, target.id));
+
+    // Any account this organiser invited keeps existing on its own.
+    await tx
+      .update(admins)
+      .set({ createdBy: null })
+      .where(eq(admins.createdBy, target.id));
+
+    await tx.delete(sessions).where(eq(sessions.adminId, target.id));
+    await tx.delete(admins).where(eq(admins.id, target.id));
+  });
+
+  revalidatePath("/admin/accounts");
+  return { ok: true, message: `${target.name} has been deleted.` };
 }

@@ -1,6 +1,5 @@
 import Link from "next/link";
 import {
-  AlertTriangle,
   CalendarCheck,
   Lock,
   TrendingUp,
@@ -14,7 +13,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { requireAdmin } from "@/lib/auth/guards";
-import { countOtherActiveAdmins } from "@/lib/auth/admin-auth";
 import { formatIsoDateLong } from "@/lib/dates";
 import { getAdminOverview } from "@/lib/queries";
 import { competitionClock, getSettings } from "@/lib/settings";
@@ -24,14 +22,11 @@ export const dynamic = "force-dynamic";
 
 /** `/admin` — registrations, today's submission count, averages (section 5.2). */
 export default async function AdminOverviewPage() {
-  const session = await requireAdmin();
+  await requireAdmin();
   const settings = await getSettings();
   const clock = competitionClock(settings);
 
-  const [overview, otherAdmins] = await Promise.all([
-    getAdminOverview(settings, clock.today),
-    countOtherActiveAdmins(session.adminId),
-  ]);
+  const overview = await getAdminOverview(settings, clock.today);
 
   const activeCount = overview.registrations.active;
   const submittedToday = overview.today.submitted;
@@ -60,24 +55,6 @@ export default async function AdminOverviewPage() {
           <Badge variant="outline">{settings.timezone}</Badge>
         </div>
       </header>
-
-      {/* Section 2.3: at least two super admin accounts must exist. */}
-      {otherAdmins === 0 && (
-        <Alert variant="destructive">
-          <AlertTriangle className="size-4" />
-          <AlertTitle>You are the only organiser account</AlertTitle>
-          <AlertDescription className="space-y-3">
-            <p>
-              With mandatory two-factor authentication and no email-only reset
-              path, one account plus a lost phone locks BCJ out of its own
-              competition.
-            </p>
-            <Button asChild size="sm" variant="outline" className="h-11">
-              <Link href="/admin/accounts">Invite a second organiser</Link>
-            </Button>
-          </AlertDescription>
-        </Alert>
-      )}
 
       {overview.registrations.pending > 0 && (
         <Alert>

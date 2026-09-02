@@ -25,6 +25,7 @@ export type AuditAction =
   | "admin.invited"
   | "admin.invite_accepted"
   | "admin.disabled"
+  | "admin.deleted"
   | "admin.enabled"
   | "admin.password_changed"
   | "admin.totp_enrolled"
@@ -52,7 +53,8 @@ export type AuditAction =
   | "settings.rules_unlocked"
   | "export.generated"
   | "health.viewed"
-  | "scores.recomputed";
+  | "scores.recomputed"
+  | "competition.reset";
 
 export interface AuditInput {
   action: AuditAction;

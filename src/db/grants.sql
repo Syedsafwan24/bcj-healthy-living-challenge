@@ -21,5 +21,8 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON
   sessions, daily_entries, weekly_scores, final_scores, rate_limits
 TO :"app_role";
 
-GRANT USAGE, SELECT ON SEQUENCE participant_seq TO :"app_role";
+-- UPDATE as well as USAGE: the end-of-season reset calls setval() to put
+-- registration numbering back to 1, and setval needs UPDATE on the sequence.
+-- USAGE alone covers only nextval and currval.
+GRANT USAGE, SELECT, UPDATE ON SEQUENCE participant_seq TO :"app_role";
 GRANT USAGE, SELECT ON SEQUENCE diet_categories_id_seq TO :"app_role";
