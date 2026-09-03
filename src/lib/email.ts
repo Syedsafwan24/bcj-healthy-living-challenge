@@ -47,11 +47,18 @@ function getTransport(): Transporter | null {
   return transporter;
 }
 
+interface Attachment {
+  filename: string;
+  content: Buffer;
+}
+
 interface Message {
   to: string | string[];
   subject: string;
   html: string;
   text: string;
+  /** Extra files beyond the inline logo, e.g. the 90-day handout. */
+  attachments?: Attachment[];
 }
 
 /**
@@ -75,6 +82,31 @@ function getLogo(): Buffer | null {
     logoBuffer = null;
   }
   return logoBuffer;
+}
+
+/**
+ * BCJ's 90-day handout, attached to the registration email so a new
+ * participant has the plan in hand from day one rather than needing to find
+ * it on the site.
+ *
+ * Read once and cached, the same as the logo. Missing is not fatal: the
+ * registration ID is the thing that must arrive, so a handout that failed to
+ * load is dropped rather than blocking the send.
+ */
+const HANDOUT_FILENAME = "BCJ Healthy Living Challenge - 90 Day Handout.pdf";
+let handoutBuffer: Buffer | null | undefined;
+
+function getHandout(): Buffer | null {
+  if (handoutBuffer !== undefined) return handoutBuffer;
+  try {
+    handoutBuffer = readFileSync(
+      join(process.cwd(), "src/assets/bcj-90-day-handout.pdf"),
+    );
+  } catch (error) {
+    console.error("[email] 90-day handout not found, sending without it", error);
+    handoutBuffer = null;
+  }
+  return handoutBuffer;
 }
 
 async function send(message: Message): Promise<{ sent: boolean; id?: string }> {
@@ -102,16 +134,23 @@ async function send(message: Message): Promise<{ sent: boolean; id?: string }> {
       subject: message.subject,
       text: message.text,
       html: message.html,
-      attachments: logo
-        ? [
-            {
-              filename: "bcj-logo.png",
-              content: logo,
-              cid: LOGO_CID,
-              contentDisposition: "inline",
-            },
-          ]
-        : undefined,
+      attachments: [
+        ...(logo
+          ? [
+              {
+                filename: "bcj-logo.png",
+                content: logo,
+                cid: LOGO_CID,
+                contentDisposition: "inline" as const,
+              },
+            ]
+          : []),
+        ...(message.attachments ?? []).map((a) => ({
+          filename: a.filename,
+          content: a.content,
+          contentDisposition: "attachment" as const,
+        })),
+      ],
     });
     return { sent: true, id: info.messageId };
   } catch (error) {
@@ -206,9 +245,13 @@ export async function sendRegistrationId(params: {
   registrationId: string;
 }) {
   const url = `${env.appUrl}/login`;
+  const handout = getHandout();
   return send({
     to: params.to,
     subject: `Your BCJ Challenge registration ID — ${params.registrationId}`,
+    attachments: handout
+      ? [{ filename: HANDOUT_FILENAME, content: handout }]
+      : undefined,
     text: [
       `As-salamu alaykum ${params.fullName},`,
       "",
@@ -220,13 +263,18 @@ export async function sendRegistrationId(params: {
       `Sign in at ${url}`,
       "",
       `If several people registered from this address, each has their own ID and signs in separately.`,
+      ...(handout ? ["", `Your 90-day handout is attached to this email.`] : []),
     ].join("\n"),
     html: layout(
       `As-salamu alaykum ${escapeHtml(params.fullName)}`,
       `<p style="margin:0 0 20px;font-size:15px;line-height:1.6">You are registered for the BCJ Healthy Living Challenge, 12 weeks of daily logging.</p>
        ${idBlock(escapeHtml(params.registrationId))}
        <p style="margin:0 0 20px;font-size:15px;line-height:1.6">This ID is how you sign in. There is no password, so keep it somewhere safe. You can sign in straight away — there is nothing to wait for. If several people registered from this address, each has their own ID and signs in separately.</p>
-       <p style="margin:0"><a href="${url}" style="background:${ACCENT};color:#ffffff;text-decoration:none;padding:12px 20px;border-radius:10px;display:inline-block;font-weight:600">Sign in</a></p>`,
+       <p style="margin:0"><a href="${url}" style="background:${ACCENT};color:#ffffff;text-decoration:none;padding:12px 20px;border-radius:10px;display:inline-block;font-weight:600">Sign in</a></p>${
+         handout
+           ? `<p style="margin:20px 0 0;font-size:13px;color:#4E5C56">Your 90-day handout is attached to this email.</p>`
+           : ""
+       }`,
     ),
   });
 }
