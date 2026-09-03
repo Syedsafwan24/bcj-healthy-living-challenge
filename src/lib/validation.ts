@@ -58,9 +58,11 @@ export const registrationSchema = z.object({
   // registration ID is delivered by email and the lost-ID recovery flow
   // depends on it — open item O-7.
   email: emailSchema,
+  // Doubles as the display name shown on the leaderboard (V6 section 9). The
+  // registration form asks for the name once; an organiser can still give
+  // someone a separate public name later from /admin/participants if BCJ
+  // ever needs to moderate one.
   fullName: trimmed(120),
-  // Shown on the leaderboard. V6 section 9 lists the approved display name.
-  displayName: trimmed(40),
   mobile: mobileSchema,
   age: z.coerce
     .number()

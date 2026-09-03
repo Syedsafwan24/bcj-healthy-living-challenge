@@ -365,7 +365,6 @@ export async function sendAdminInvite(params: {
 export async function sendNewRegistrationAlert(params: {
   to: string[];
   fullName: string;
-  displayName: string;
   registrationId: string;
   email: string;
   mobile: string;
@@ -380,7 +379,6 @@ export async function sendNewRegistrationAlert(params: {
 
   const facts: Array<[string, string]> = [
     ["Registration ID", params.registrationId],
-    ["Display name", params.displayName],
     ["Email", params.email],
     ["Mobile", params.mobile],
     ["Age", String(params.age)],

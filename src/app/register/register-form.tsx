@@ -75,7 +75,7 @@ export function RegisterForm() {
 
       <FormSection
         title="Who you are"
-        description="Your display name is what appears on the leaderboard. Your full name is not shown to other participants."
+        description="This is the name BCJ will know you by, including on the leaderboard if one is published."
       >
         <div className="grid gap-5 sm:grid-cols-2">
           <Field id="fullName" label="Full name" required error={errors.fullName}>
@@ -83,22 +83,6 @@ export function RegisterForm() {
               id="fullName"
               name="fullName"
               autoComplete="name"
-              required
-              className="h-11"
-            />
-          </Field>
-
-          <Field
-            id="displayName"
-            label="Display name"
-            required
-            error={errors.displayName}
-            hint="Shown on the leaderboard."
-          >
-            <Input
-              id="displayName"
-              name="displayName"
-              maxLength={40}
               required
               className="h-11"
             />

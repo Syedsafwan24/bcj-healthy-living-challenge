@@ -83,7 +83,11 @@ export async function registerParticipant(
             seqNo: seq.seq_no,
             email: values.email,
             fullName: values.fullName,
-            displayName: values.displayName,
+            // The registration form collects one name; it stands in for the
+            // display name everywhere that column is read (the leaderboard,
+            // the admin roster). An organiser can still set a different
+            // public name later from /admin/participants.
+            displayName: values.fullName,
             mobile: values.mobile,
             age: values.age,
             gender: values.gender,
@@ -194,7 +198,6 @@ export async function registerParticipant(
         await sendNewRegistrationAlert({
           to: recipients.map((r) => r.email),
           fullName: values.fullName,
-          displayName: values.displayName,
           registrationId,
           email: values.email,
           mobile: values.mobile,
