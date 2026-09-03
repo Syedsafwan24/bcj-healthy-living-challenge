@@ -64,20 +64,29 @@ export const registrationSchema = z.object({
   // ever needs to moderate one.
   fullName: trimmed(120),
   mobile: mobileSchema,
+  // Optional at BCJ's request: without it, suggestDietCategory cannot apply
+  // the kids-band check and flags the suggestion for an organiser to
+  // confirm, same as an unmatched weight.
   age: z.coerce
     .number()
     .int("Enter age in whole years")
     .min(10, "The challenge is open from age 10")
-    .max(100),
+    .max(100)
+    .optional()
+    .nullable(),
   gender: z.enum(genders),
-  areaOfResidence: trimmed(80),
-  residenceStatus: z.enum(residenceStatuses),
+  // Not collected at registration; an organiser can add it from
+  // /admin/participants if BCJ wants it on file.
   heightCm: z.coerce.number().min(50).max(250).optional().nullable(),
-  // Required, because it determines the diet category in V5 section 6.
+  // Optional at BCJ's request. Decides which diet plan is suggested (V5
+  // section 6); without it the suggestion is left for an organiser to assign
+  // rather than guessed.
   weightKg: z.coerce
     .number()
     .min(20, "Enter weight in kilograms")
-    .max(300, "Enter weight in kilograms"),
+    .max(300, "Enter weight in kilograms")
+    .optional()
+    .nullable(),
   // Open item O-10: confirm whether this is the same measurement as weight.
   startingWeightKg: z.coerce.number().min(20).max(300).optional().nullable(),
 
@@ -86,9 +95,7 @@ export const registrationSchema = z.object({
     .enum(["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"])
     .optional()
     .nullable(),
-  bloodPressure: z.string().trim().max(40).optional().nullable(),
   diabetesStatus: z.enum(["no", "diagnosed", "not_sure"]).optional().nullable(),
-  bloodSugar: z.string().trim().max(40).optional().nullable(),
 });
 
 export type RegistrationInput = z.input<typeof registrationSchema>;
@@ -268,12 +275,15 @@ export const participantUpdateSchema = z.object({
   displayName: trimmed(40),
   email: emailSchema,
   mobile: mobileSchema,
-  age: z.coerce.number().int().min(10).max(100),
+  // No longer collected at registration, so an existing record may not have
+  // one yet. Optional here too, so correcting an unrelated field never forces
+  // an organiser to also backfill these.
+  age: z.coerce.number().int().min(10).max(100).optional().nullable(),
   gender: z.enum(genders),
-  areaOfResidence: trimmed(80),
-  residenceStatus: z.enum(residenceStatuses),
+  areaOfResidence: trimmed(80).optional().nullable(),
+  residenceStatus: z.enum(residenceStatuses).optional().nullable(),
   heightCm: z.coerce.number().min(50).max(250).optional().nullable(),
-  weightKg: z.coerce.number().min(20).max(300),
+  weightKg: z.coerce.number().min(20).max(300).optional().nullable(),
   startingWeightKg: z.coerce.number().min(20).max(300).optional().nullable(),
   dietCategoryId: z.coerce.number().int().positive().optional().nullable(),
   status: z.enum(["pending", "active", "withdrawn"]),
@@ -296,18 +306,23 @@ export const participantUpdateSchema = z.object({
  */
 export const participantSelfUpdateSchema = z.object({
   mobile: mobileSchema,
+  // Neither of these is collected at registration any more, so neither is
+  // required here — a participant correcting their mobile number should
+  // never be blocked on supplying an age or weight nobody asked them for.
   age: z.coerce
     .number()
     .int("Enter age in whole years")
     .min(10, "The challenge is open from age 10")
-    .max(100),
-  areaOfResidence: trimmed(80),
-  residenceStatus: z.enum(residenceStatuses),
+    .max(100)
+    .optional()
+    .nullable(),
   heightCm: z.coerce.number().min(50).max(250).optional().nullable(),
   weightKg: z.coerce
     .number()
     .min(20, "Enter weight in kilograms")
-    .max(300, "Enter weight in kilograms"),
+    .max(300, "Enter weight in kilograms")
+    .optional()
+    .nullable(),
 });
 
 export type ParticipantSelfUpdateValues = z.output<

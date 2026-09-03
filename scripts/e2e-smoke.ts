@@ -78,13 +78,10 @@ async function main() {
 
   await page.goto(`${BASE}/register`, { waitUntil: "networkidle" });
   await page.fill("#fullName", "E2E Test Person");
-  await page.fill("#displayName", `E2E ${stamp}`);
   await page.fill("#email", email);
   await page.fill("#mobile", "+966500000111");
   await page.fill("#age", "33");
   await selectOption(page, "#gender", "Male");
-  await page.fill("#areaOfResidence", "Al Rawdah");
-  await selectOption(page, "#residenceStatus", "Family");
   await page.fill("#weightKg", "78");
   await page.click('button[type="submit"]');
 
@@ -100,13 +97,10 @@ async function main() {
   // Two people, one email address — specification section 1 and O-7.
   await page.goto(`${BASE}/register`, { waitUntil: "networkidle" });
   await page.fill("#fullName", "E2E Family Member");
-  await page.fill("#displayName", `E2E kin ${stamp}`);
   await page.fill("#email", email);
   await page.fill("#mobile", "+966500000112");
   await page.fill("#age", "28");
   await selectOption(page, "#gender", "Female");
-  await page.fill("#areaOfResidence", "Al Rawdah");
-  await selectOption(page, "#residenceStatus", "Family");
   await page.fill("#weightKg", "58");
   await page.click('button[type="submit"]');
   await page.waitForURL(/\/register\/success/, { timeout: 30000 });

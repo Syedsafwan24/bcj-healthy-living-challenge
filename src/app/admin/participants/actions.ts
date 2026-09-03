@@ -55,7 +55,14 @@ export async function updateParticipant(
     delete raw.dietCategoryId;
   }
   // Empty optional numbers arrive as ""; Zod's optional() wants undefined.
-  for (const key of ["heightCm", "startingWeightKg"]) {
+  for (const key of [
+    "heightCm",
+    "startingWeightKg",
+    "age",
+    "areaOfResidence",
+    "residenceStatus",
+    "weightKg",
+  ]) {
     if (raw[key] === "") delete raw[key];
   }
 
@@ -80,12 +87,12 @@ export async function updateParticipant(
       displayName: values.displayName,
       email: values.email,
       mobile: values.mobile,
-      age: values.age,
+      age: values.age ?? null,
       gender: values.gender,
-      areaOfResidence: values.areaOfResidence,
-      residenceStatus: values.residenceStatus,
+      areaOfResidence: values.areaOfResidence ?? null,
+      residenceStatus: values.residenceStatus ?? null,
       heightCm: values.heightCm != null ? String(values.heightCm) : null,
-      weightKg: String(values.weightKg),
+      weightKg: values.weightKg != null ? String(values.weightKg) : null,
       startingWeightKg:
         values.startingWeightKg != null ? String(values.startingWeightKg) : null,
       dietCategoryId: values.dietCategoryId ?? null,

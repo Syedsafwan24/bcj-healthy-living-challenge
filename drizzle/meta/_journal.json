@@ -22,6 +22,13 @@
       "when": 1788196346115,
       "tag": "0002_align_audit_index_ordering",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1788445268512,
+      "tag": "0003_make_optional_fields_nullable",
+      "breakpoints": true
     }
   ]
 }

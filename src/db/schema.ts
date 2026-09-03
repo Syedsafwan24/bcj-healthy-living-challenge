@@ -154,13 +154,20 @@ export const participants = pgTable(
     fullName: text("full_name").notNull(),
     displayName: text("display_name").notNull(),
     mobile: text("mobile").notNull(),
-    age: integer("age").notNull(),
+    // No longer collected at registration (BCJ trimmed the form) — the diet
+    // suggestion just skips the age-based kids check and always flags for
+    // review when it is missing. An organiser can still add it later.
+    age: integer("age"),
     gender: text("gender").notNull(),
-    areaOfResidence: text("area_of_residence").notNull(),
-    residenceStatus: text("residence_status").notNull(),
+    // No longer collected at registration; kept for anyone who wants to
+    // record it on /admin/participants.
+    areaOfResidence: text("area_of_residence"),
+    residenceStatus: text("residence_status"),
     heightCm: numeric("height_cm", { precision: 5, scale: 2 }),
-    /** Required: determines the diet category in V5 section 6. */
-    weightKg: numeric("weight_kg", { precision: 5, scale: 2 }).notNull(),
+    // No longer required at registration. Without it the diet suggestion
+    // cannot match a weight band, so it is left for an organiser to assign
+    // (V5 section 6) rather than guessed.
+    weightKg: numeric("weight_kg", { precision: 5, scale: 2 }),
     /** Open item O-10: confirm whether this is the same measurement. */
     startingWeightKg: numeric("starting_weight_kg", { precision: 5, scale: 2 }),
     dietCategoryId: integer("diet_category_id").references(

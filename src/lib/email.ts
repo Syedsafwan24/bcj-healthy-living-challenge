@@ -368,9 +368,9 @@ export async function sendNewRegistrationAlert(params: {
   registrationId: string;
   email: string;
   mobile: string;
-  age: number;
-  areaOfResidence: string;
-  weightKg: string;
+  // Neither is collected at registration any more, so either may be absent.
+  age: number | null;
+  weightKg: string | null;
   dietCategory: string | null;
   dietNeedsReview: boolean;
   participantId: string;
@@ -381,9 +381,8 @@ export async function sendNewRegistrationAlert(params: {
     ["Registration ID", params.registrationId],
     ["Email", params.email],
     ["Mobile", params.mobile],
-    ["Age", String(params.age)],
-    ["Area", params.areaOfResidence],
-    ["Weight", `${params.weightKg} kg`],
+    ["Age", params.age != null ? String(params.age) : "Not given"],
+    ["Weight", params.weightKg != null ? `${params.weightKg} kg` : "Not given"],
     [
       "Suggested diet plan",
       params.dietCategory

@@ -39,12 +39,12 @@ export async function registerParticipant(
 
   // Empty optional fields arrive as "". Zod's optional() wants undefined.
   for (const key of [
+    "age",
     "heightCm",
+    "weightKg",
     "startingWeightKg",
     "bloodGroup",
-    "bloodPressure",
     "diabetesStatus",
-    "bloodSugar",
   ]) {
     if (raw[key] === "") delete raw[key];
   }
@@ -58,7 +58,11 @@ export async function registerParticipant(
   // The diet category is suggested here from V5 section 6 and confirmed by an
   // admin on /admin/participants, which is where the assignment happens.
   const categories = await listDietCategories();
-  const suggestion = suggestDietCategory(categories, values.age, values.weightKg);
+  const suggestion = suggestDietCategory(
+    categories,
+    values.age ?? null,
+    values.weightKg ?? null,
+  );
 
   let created: { id: string; registrationId: string } | null = null;
   let lastError: unknown = null;
@@ -89,12 +93,10 @@ export async function registerParticipant(
             // public name later from /admin/participants.
             displayName: values.fullName,
             mobile: values.mobile,
-            age: values.age,
+            age: values.age ?? null,
             gender: values.gender,
-            areaOfResidence: values.areaOfResidence,
-            residenceStatus: values.residenceStatus,
             heightCm: values.heightCm != null ? String(values.heightCm) : null,
-            weightKg: String(values.weightKg),
+            weightKg: values.weightKg != null ? String(values.weightKg) : null,
             startingWeightKg:
               values.startingWeightKg != null
                 ? String(values.startingWeightKg)
@@ -113,18 +115,11 @@ export async function registerParticipant(
           });
 
         // Health fields go to a separate table, visible to super admins only.
-        if (
-          values.bloodGroup ||
-          values.bloodPressure ||
-          values.diabetesStatus ||
-          values.bloodSugar
-        ) {
+        if (values.bloodGroup || values.diabetesStatus) {
           await tx.insert(participantHealth).values({
             participantId: row.id,
             bloodGroup: values.bloodGroup ?? null,
-            bloodPressure: values.bloodPressure ?? null,
             diabetesStatus: values.diabetesStatus ?? null,
-            bloodSugar: values.bloodSugar ?? null,
           });
         }
 
@@ -201,9 +196,8 @@ export async function registerParticipant(
           registrationId,
           email: values.email,
           mobile: values.mobile,
-          age: values.age,
-          areaOfResidence: values.areaOfResidence,
-          weightKg: String(values.weightKg),
+          age: values.age ?? null,
+          weightKg: values.weightKg != null ? String(values.weightKg) : null,
           dietCategory: suggestion.title,
           dietNeedsReview: suggestion.needsReview,
           participantId,

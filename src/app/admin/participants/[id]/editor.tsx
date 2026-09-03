@@ -36,12 +36,14 @@ export interface EditableParticipant {
   displayName: string;
   email: string;
   mobile: string;
-  age: number;
+  // No longer collected at registration, so an existing record may have any
+  // of these four as null until an organiser fills them in.
+  age: number | null;
   gender: string;
-  areaOfResidence: string;
-  residenceStatus: string;
+  areaOfResidence: string | null;
+  residenceStatus: string | null;
   heightCm: string | null;
-  weightKg: string;
+  weightKg: string | null;
   startingWeightKg: string | null;
   dietCategoryId: number | null;
   status: string;
@@ -149,15 +151,14 @@ export function ParticipantEditor({
               />
             </Field>
 
-            <Field id="age" label="Age" required error={errors.age}>
+            <Field id="age" label="Age" error={errors.age}>
               <Input
                 id="age"
                 name="age"
                 type="number"
                 min={10}
                 max={100}
-                defaultValue={participant.age}
-                required
+                defaultValue={participant.age ?? ""}
                 className="tabular h-11"
               />
             </Field>
@@ -177,14 +178,13 @@ export function ParticipantEditor({
             <Field
               id="areaOfResidence"
               label="Area of residence"
-              required
               error={errors.areaOfResidence}
+              hint="No longer asked at registration. Set it here if BCJ wants it on file."
             >
               <Input
                 id="areaOfResidence"
                 name="areaOfResidence"
-                defaultValue={participant.areaOfResidence}
-                required
+                defaultValue={participant.areaOfResidence ?? ""}
                 className="h-11"
               />
             </Field>
@@ -192,15 +192,14 @@ export function ParticipantEditor({
             <Field
               id="residenceStatus"
               label="Residence status"
-              required
               error={errors.residenceStatus}
             >
               <Select
                 name="residenceStatus"
-                defaultValue={participant.residenceStatus}
+                defaultValue={participant.residenceStatus ?? undefined}
               >
                 <SelectTrigger id="residenceStatus" className="h-11 w-full">
-                  <SelectValue />
+                  <SelectValue placeholder="Not set" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="bachelor">Bachelor</SelectItem>
@@ -230,9 +229,8 @@ export function ParticipantEditor({
             <Field
               id="weightKg"
               label="Weight (kg)"
-              required
               error={errors.weightKg}
-              hint="Decides which diet plan suits them."
+              hint="Decides which diet plan suits them. No longer required at registration."
             >
               <Input
                 id="weightKg"
@@ -241,8 +239,7 @@ export function ParticipantEditor({
                 step="0.1"
                 min={20}
                 max={300}
-                defaultValue={participant.weightKg}
-                required
+                defaultValue={participant.weightKg ?? ""}
                 className="tabular h-11"
               />
             </Field>

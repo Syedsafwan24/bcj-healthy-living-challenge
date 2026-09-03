@@ -119,7 +119,12 @@ export function RegisterForm() {
             />
           </Field>
 
-          <Field id="age" label="Age" required error={errors.age}>
+          <Field
+            id="age"
+            label="Age"
+            error={errors.age}
+            hint="Optional. Helps BCJ suggest the right diet plan."
+          >
             <Input
               id="age"
               name="age"
@@ -127,7 +132,6 @@ export function RegisterForm() {
               inputMode="numeric"
               min={10}
               max={100}
-              required
               className="h-11"
             />
           </Field>
@@ -143,37 +147,6 @@ export function RegisterForm() {
               </SelectContent>
             </Select>
           </Field>
-
-          <Field
-            id="areaOfResidence"
-            label="Area of residence"
-            required
-            error={errors.areaOfResidence}
-          >
-            <Input
-              id="areaOfResidence"
-              name="areaOfResidence"
-              required
-              className="h-11"
-            />
-          </Field>
-
-          <Field
-            id="residenceStatus"
-            label="Residence status"
-            required
-            error={errors.residenceStatus}
-          >
-            <Select name="residenceStatus" required>
-              <SelectTrigger id="residenceStatus" className="h-11 w-full">
-                <SelectValue placeholder="Select" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="bachelor">Bachelor</SelectItem>
-                <SelectItem value="family">Family</SelectItem>
-              </SelectContent>
-            </Select>
-          </Field>
         </div>
       </FormSection>
 
@@ -181,45 +154,13 @@ export function RegisterForm() {
 
       <FormSection
         title="Measurements"
-        description="Weight decides which BCJ diet plan you are given, so it is required."
+        description="Optional. Weight helps BCJ suggest the right diet plan; an organiser can also assign one for you later."
       >
-        <div className="grid gap-5 sm:grid-cols-3">
-          <Field id="heightCm" label="Height (cm)" error={errors.heightCm}>
-            <Input
-              id="heightCm"
-              name="heightCm"
-              type="number"
-              inputMode="decimal"
-              step="0.1"
-              min={50}
-              max={250}
-              className="h-11"
-            />
-          </Field>
-
-          <Field id="weightKg" label="Weight (kg)" required error={errors.weightKg}>
+        <div className="grid gap-5 sm:grid-cols-2">
+          <Field id="weightKg" label="Weight (kg)" error={errors.weightKg}>
             <Input
               id="weightKg"
               name="weightKg"
-              type="number"
-              inputMode="decimal"
-              step="0.1"
-              min={20}
-              max={300}
-              required
-              className="h-11"
-            />
-          </Field>
-
-          <Field
-            id="startingWeightKg"
-            label="Starting weight (kg)"
-            error={errors.startingWeightKg}
-            hint="Leave blank if it is the same as your weight above."
-          >
-            <Input
-              id="startingWeightKg"
-              name="startingWeightKg"
               type="number"
               inputMode="decimal"
               step="0.1"
@@ -254,15 +195,6 @@ export function RegisterForm() {
           </Field>
 
           <Field
-            id="bloodPressure"
-            label="Blood pressure"
-            error={errors.bloodPressure}
-            hint="For example 120/80."
-          >
-            <Input id="bloodPressure" name="bloodPressure" className="h-11" />
-          </Field>
-
-          <Field
             id="diabetesStatus"
             label="Diabetes or sugar"
             error={errors.diabetesStatus}
@@ -279,15 +211,6 @@ export function RegisterForm() {
                 ))}
               </SelectContent>
             </Select>
-          </Field>
-
-          <Field
-            id="bloodSugar"
-            label="Blood sugar reading"
-            error={errors.bloodSugar}
-            hint="Most recent reading, with units if you have them."
-          >
-            <Input id="bloodSugar" name="bloodSugar" className="h-11" />
           </Field>
         </div>
       </FormSection>

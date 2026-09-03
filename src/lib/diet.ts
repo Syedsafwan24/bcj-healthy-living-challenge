@@ -39,16 +39,30 @@ export interface DietSuggestion {
  */
 export function suggestDietCategory(
   categories: DietCategory[],
-  age: number,
-  weightKg: number,
+  age: number | null,
+  weightKg: number | null,
 ): DietSuggestion {
   const kids = categories.find((c) => c.code === "kids_10_17");
-  if (age >= KIDS_MIN_AGE && age <= KIDS_MAX_AGE && kids) {
+  if (age != null && age >= KIDS_MIN_AGE && age <= KIDS_MAX_AGE && kids) {
     return {
       categoryId: kids.id,
       code: kids.code,
       title: kids.title,
       needsReview: false,
+    };
+  }
+
+  // Neither age nor weight is required at registration any more. Without a
+  // weight there is nothing to match a band against, and without an age the
+  // kids band above cannot be ruled out — either way this is an organiser's
+  // call, not a guess.
+  if (weightKg == null) {
+    return {
+      categoryId: null,
+      code: null,
+      title: null,
+      needsReview: true,
+      note: "No weight was given at registration. Assign a diet category before activating.",
     };
   }
 
@@ -67,7 +81,13 @@ export function suggestDietCategory(
       categoryId: match.id,
       code: match.code,
       title: match.title,
-      needsReview: false,
+      // A weight-band match is only certain once age has ruled out the kids
+      // band; missing age still means confirming this by hand.
+      needsReview: age == null,
+      note:
+        age == null
+          ? "No age was given at registration, so the kids band (10–17) could not be ruled out. Confirm before activating."
+          : undefined,
     };
   }
 

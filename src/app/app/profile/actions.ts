@@ -32,14 +32,7 @@ export interface ProfileActionState {
   message?: string;
 }
 
-const TRACKED = [
-  "mobile",
-  "age",
-  "areaOfResidence",
-  "residenceStatus",
-  "heightCm",
-  "weightKg",
-];
+const TRACKED = ["mobile", "age", "heightCm", "weightKg"];
 
 export async function updateMyDetails(
   _prev: ProfileActionState | null,
@@ -48,8 +41,10 @@ export async function updateMyDetails(
   const session = await requireParticipant();
 
   const raw = Object.fromEntries(formData) as Record<string, string>;
-  // An empty optional number arrives as ""; Zod's optional() wants undefined.
-  if (raw.heightCm === "") delete raw.heightCm;
+  // Empty optional numbers arrive as ""; Zod's optional() wants undefined.
+  for (const key of ["heightCm", "age", "weightKg"]) {
+    if (raw[key] === "") delete raw[key];
+  }
 
   const parsed = participantSelfUpdateSchema.safeParse(raw);
   if (!parsed.success) {
@@ -69,11 +64,9 @@ export async function updateMyDetails(
     .update(participants)
     .set({
       mobile: values.mobile,
-      age: values.age,
-      areaOfResidence: values.areaOfResidence,
-      residenceStatus: values.residenceStatus,
+      age: values.age ?? null,
       heightCm: values.heightCm != null ? String(values.heightCm) : null,
-      weightKg: String(values.weightKg),
+      weightKg: values.weightKg != null ? String(values.weightKg) : null,
     })
     .where(eq(participants.id, session.participantId))
     .returning();

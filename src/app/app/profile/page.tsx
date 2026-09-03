@@ -107,8 +107,6 @@ export default async function ProfilePage() {
             profile={{
               mobile: profile.mobile,
               age: profile.age,
-              areaOfResidence: profile.areaOfResidence,
-              residenceStatus: profile.residenceStatus,
               heightCm: profile.heightCm,
               weightKg: profile.weightKg,
             }}

@@ -8,13 +8,6 @@ import { Field } from "@/components/field";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { updateMyDetails, type ProfileActionState } from "./actions";
 
 /**
@@ -40,11 +33,9 @@ export function ProfileForm({
 }: {
   profile: {
     mobile: string;
-    age: number;
-    areaOfResidence: string;
-    residenceStatus: string;
+    age: number | null;
     heightCm: string | null;
-    weightKg: string;
+    weightKg: string | null;
   };
 }) {
   const [state, action] = useActionState<ProfileActionState | null, FormData>(
@@ -79,49 +70,21 @@ export function ProfileForm({
           />
         </Field>
 
-        <Field id="age" label="Age" required error={errors.age}>
+        <Field
+          id="age"
+          label="Age"
+          error={errors.age}
+          hint="Leave empty if you would rather not say."
+        >
           <Input
             id="age"
             name="age"
             type="number"
             min={10}
             max={100}
-            defaultValue={profile.age}
-            required
+            defaultValue={profile.age ?? ""}
             className="tabular h-11"
           />
-        </Field>
-
-        <Field
-          id="areaOfResidence"
-          label="Area of residence"
-          required
-          error={errors.areaOfResidence}
-        >
-          <Input
-            id="areaOfResidence"
-            name="areaOfResidence"
-            defaultValue={profile.areaOfResidence}
-            required
-            className="h-11"
-          />
-        </Field>
-
-        <Field
-          id="residenceStatus"
-          label="Residence status"
-          required
-          error={errors.residenceStatus}
-        >
-          <Select name="residenceStatus" defaultValue={profile.residenceStatus} required>
-            <SelectTrigger id="residenceStatus" className="h-11 w-full">
-              <SelectValue placeholder="Select" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="bachelor">Bachelor</SelectItem>
-              <SelectItem value="family">Family</SelectItem>
-            </SelectContent>
-          </Select>
         </Field>
 
         <Field
@@ -145,7 +108,6 @@ export function ProfileForm({
         <Field
           id="weightKg"
           label="Current weight (kg)"
-          required
           error={errors.weightKg}
           hint="Your starting weight is kept separately and only an organiser can change it."
         >
@@ -156,8 +118,7 @@ export function ProfileForm({
             step="0.01"
             min={20}
             max={300}
-            defaultValue={profile.weightKg}
-            required
+            defaultValue={profile.weightKg ?? ""}
             className="tabular h-11"
           />
         </Field>
