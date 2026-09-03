@@ -32,7 +32,7 @@ export interface ProfileActionState {
   message?: string;
 }
 
-const TRACKED = ["mobile", "age", "heightCm", "weightKg"];
+const TRACKED = ["mobile", "age", "weightKg"];
 
 export async function updateMyDetails(
   _prev: ProfileActionState | null,
@@ -42,7 +42,7 @@ export async function updateMyDetails(
 
   const raw = Object.fromEntries(formData) as Record<string, string>;
   // Empty optional numbers arrive as ""; Zod's optional() wants undefined.
-  for (const key of ["heightCm", "age", "weightKg"]) {
+  for (const key of ["age", "weightKg"]) {
     if (raw[key] === "") delete raw[key];
   }
 
@@ -65,7 +65,6 @@ export async function updateMyDetails(
     .set({
       mobile: values.mobile,
       age: values.age ?? null,
-      heightCm: values.heightCm != null ? String(values.heightCm) : null,
       weightKg: values.weightKg != null ? String(values.weightKg) : null,
     })
     .where(eq(participants.id, session.participantId))

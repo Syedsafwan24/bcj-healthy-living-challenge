@@ -35,9 +35,7 @@ const TRACKED = [
   "mobile",
   "age",
   "gender",
-  "heightCm",
   "weightKg",
-  "startingWeightKg",
   "dietCategoryId",
   "status",
 ];
@@ -53,7 +51,7 @@ export async function updateParticipant(
     delete raw.dietCategoryId;
   }
   // Empty optional numbers arrive as ""; Zod's optional() wants undefined.
-  for (const key of ["heightCm", "startingWeightKg", "age", "weightKg"]) {
+  for (const key of ["age", "weightKg"]) {
     if (raw[key] === "") delete raw[key];
   }
 
@@ -82,10 +80,7 @@ export async function updateParticipant(
       mobile: values.mobile,
       age: values.age ?? null,
       gender: values.gender,
-      heightCm: values.heightCm != null ? String(values.heightCm) : null,
       weightKg: values.weightKg != null ? String(values.weightKg) : null,
-      startingWeightKg:
-        values.startingWeightKg != null ? String(values.startingWeightKg) : null,
       dietCategoryId: values.dietCategoryId ?? null,
       status: values.status,
     })

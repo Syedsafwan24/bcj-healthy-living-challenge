@@ -245,9 +245,7 @@ export default async function ParticipantDetailPage({
               mobile: profile.mobile,
               age: profile.age,
               gender: profile.gender,
-              heightCm: profile.heightCm,
               weightKg: profile.weightKg,
-              startingWeightKg: profile.startingWeightKg,
               dietCategoryId: profile.dietCategoryId,
               status: profile.status,
             }}

@@ -18,10 +18,10 @@ export const dynamic = "force-dynamic";
  * `/app/profile` — the participant's own details (section 5.1).
  *
  * Split in two on purpose. The card below holds what the organisers own: the
- * registration ID they sign in with, the display name published on the
- * leaderboard, and the diet category, gender and starting weight that decide
- * which division a prize is awarded in. The form beneath holds what describes
- * the person, which they can correct themselves.
+ * registration ID they sign in with, the name published on the leaderboard,
+ * and the diet category and gender that decide which division a prize is
+ * awarded in. The form beneath holds what describes the person, which they
+ * can correct themselves.
  */
 export default async function ProfilePage() {
   const session = await requireParticipant();
@@ -31,16 +31,13 @@ export default async function ProfilePage() {
   if (!profile) return null;
 
   // Held by the organisers. Each one either identifies the participant, is
-  // published, or decides the division a prize is judged in.
+  // published, or decides the division a prize is judged in. Full name
+  // doubles as the display name everywhere that column is read, so it is
+  // listed once.
   const rows: Array<[string, React.ReactNode]> = [
     ["Full name", profile.fullName],
-    ["Display name", profile.displayName],
     ["Email", profile.email],
     ["Gender", profile.gender === "male" ? "Male" : "Female"],
-    [
-      "Starting weight",
-      profile.startingWeightKg ? `${profile.startingWeightKg} kg` : "—",
-    ],
     ["Diet category", profile.dietTitle ?? "Not assigned yet"],
     [
       "Registered",
@@ -107,7 +104,6 @@ export default async function ProfilePage() {
             profile={{
               mobile: profile.mobile,
               age: profile.age,
-              heightCm: profile.heightCm,
               weightKg: profile.weightKg,
             }}
           />

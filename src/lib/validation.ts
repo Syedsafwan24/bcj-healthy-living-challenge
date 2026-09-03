@@ -281,9 +281,7 @@ export const participantUpdateSchema = z.object({
   // an organiser to also backfill these.
   age: z.coerce.number().int().min(10).max(100).optional().nullable(),
   gender: z.enum(genders),
-  heightCm: z.coerce.number().min(50).max(250).optional().nullable(),
   weightKg: z.coerce.number().min(20).max(300).optional().nullable(),
-  startingWeightKg: z.coerce.number().min(20).max(300).optional().nullable(),
   dietCategoryId: z.coerce.number().int().positive().optional().nullable(),
   status: z.enum(["pending", "active", "withdrawn"]),
   reason: z.string().trim().max(500).optional(),
@@ -315,7 +313,6 @@ export const participantSelfUpdateSchema = z.object({
     .max(100)
     .optional()
     .nullable(),
-  heightCm: z.coerce.number().min(50).max(250).optional().nullable(),
   weightKg: z.coerce
     .number()
     .min(20, "Enter weight in kilograms")

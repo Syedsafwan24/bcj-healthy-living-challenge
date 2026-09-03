@@ -34,7 +34,6 @@ export function ProfileForm({
   profile: {
     mobile: string;
     age: number | null;
-    heightCm: string | null;
     weightKg: string | null;
   };
 }) {
@@ -88,28 +87,10 @@ export function ProfileForm({
         </Field>
 
         <Field
-          id="heightCm"
-          label="Height (cm)"
-          error={errors.heightCm}
-          hint="Leave empty if you would rather not say."
-        >
-          <Input
-            id="heightCm"
-            name="heightCm"
-            type="number"
-            step="0.1"
-            min={50}
-            max={250}
-            defaultValue={profile.heightCm ?? ""}
-            className="tabular h-11"
-          />
-        </Field>
-
-        <Field
           id="weightKg"
           label="Current weight (kg)"
           error={errors.weightKg}
-          hint="Your starting weight is kept separately and only an organiser can change it."
+          hint="Decides which diet plan suits you."
         >
           <Input
             id="weightKg"

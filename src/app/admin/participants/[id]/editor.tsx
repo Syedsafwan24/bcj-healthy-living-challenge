@@ -35,13 +35,11 @@ export interface EditableParticipant {
   fullName: string;
   email: string;
   mobile: string;
-  // No longer collected at registration, so an existing record may have
-  // either as null until an organiser fills them in.
+  // No longer collected at registration, so an existing record may not have
+  // one yet.
   age: number | null;
   gender: string;
-  heightCm: string | null;
   weightKg: string | null;
-  startingWeightKg: string | null;
   dietCategoryId: number | null;
   status: string;
 }
@@ -165,20 +163,7 @@ export function ParticipantEditor({
           <Separator />
 
           {/* ---- measurements ---- */}
-          <div className="grid gap-5 sm:grid-cols-3">
-            <Field id="heightCm" label="Height (cm)" error={errors.heightCm}>
-              <Input
-                id="heightCm"
-                name="heightCm"
-                type="number"
-                step="0.1"
-                min={50}
-                max={250}
-                defaultValue={participant.heightCm ?? ""}
-                className="tabular h-11"
-              />
-            </Field>
-
+          <div className="grid gap-5 sm:grid-cols-2">
             <Field
               id="weightKg"
               label="Weight (kg)"
@@ -193,23 +178,6 @@ export function ParticipantEditor({
                 min={20}
                 max={300}
                 defaultValue={participant.weightKg ?? ""}
-                className="tabular h-11"
-              />
-            </Field>
-
-            <Field
-              id="startingWeightKg"
-              label="Starting weight (kg)"
-              error={errors.startingWeightKg}
-            >
-              <Input
-                id="startingWeightKg"
-                name="startingWeightKg"
-                type="number"
-                step="0.1"
-                min={20}
-                max={300}
-                defaultValue={participant.startingWeightKg ?? ""}
                 className="tabular h-11"
               />
             </Field>
