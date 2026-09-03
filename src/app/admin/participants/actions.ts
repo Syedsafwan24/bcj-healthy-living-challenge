@@ -35,8 +35,6 @@ const TRACKED = [
   "mobile",
   "age",
   "gender",
-  "areaOfResidence",
-  "residenceStatus",
   "heightCm",
   "weightKg",
   "startingWeightKg",
@@ -55,14 +53,7 @@ export async function updateParticipant(
     delete raw.dietCategoryId;
   }
   // Empty optional numbers arrive as ""; Zod's optional() wants undefined.
-  for (const key of [
-    "heightCm",
-    "startingWeightKg",
-    "age",
-    "areaOfResidence",
-    "residenceStatus",
-    "weightKg",
-  ]) {
+  for (const key of ["heightCm", "startingWeightKg", "age", "weightKg"]) {
     if (raw[key] === "") delete raw[key];
   }
 
@@ -84,13 +75,13 @@ export async function updateParticipant(
     .update(participants)
     .set({
       fullName: values.fullName,
-      displayName: values.displayName,
+      // No separate display-name input any more — see the note on
+      // participantUpdateSchema.fullName.
+      displayName: values.fullName,
       email: values.email,
       mobile: values.mobile,
       age: values.age ?? null,
       gender: values.gender,
-      areaOfResidence: values.areaOfResidence ?? null,
-      residenceStatus: values.residenceStatus ?? null,
       heightCm: values.heightCm != null ? String(values.heightCm) : null,
       weightKg: values.weightKg != null ? String(values.weightKg) : null,
       startingWeightKg:

@@ -33,15 +33,12 @@ function SubmitButton() {
 export interface EditableParticipant {
   id: string;
   fullName: string;
-  displayName: string;
   email: string;
   mobile: string;
-  // No longer collected at registration, so an existing record may have any
-  // of these four as null until an organiser fills them in.
+  // No longer collected at registration, so an existing record may have
+  // either as null until an organiser fills them in.
   age: number | null;
   gender: string;
-  areaOfResidence: string | null;
-  residenceStatus: string | null;
   heightCm: string | null;
   weightKg: string | null;
   startingWeightKg: string | null;
@@ -102,29 +99,18 @@ export function ParticipantEditor({
 
           {/* ---- identity ---- */}
           <div className="grid gap-5 sm:grid-cols-2">
-            <Field id="fullName" label="Full name" required error={errors.fullName}>
+            <Field
+              id="fullName"
+              label="Full name"
+              required
+              error={errors.fullName}
+              hint="Also what appears on the leaderboard, if one is published."
+            >
               <Input
                 id="fullName"
                 name="fullName"
                 defaultValue={participant.fullName}
                 maxLength={120}
-                required
-                className="h-11"
-              />
-            </Field>
-
-            <Field
-              id="displayName"
-              label="Display name"
-              required
-              error={errors.displayName}
-              hint="Appears on the leaderboard."
-            >
-              <Input
-                id="displayName"
-                name="displayName"
-                defaultValue={participant.displayName}
-                maxLength={40}
                 required
                 className="h-11"
               />
@@ -171,39 +157,6 @@ export function ParticipantEditor({
                 <SelectContent>
                   <SelectItem value="male">Male</SelectItem>
                   <SelectItem value="female">Female</SelectItem>
-                </SelectContent>
-              </Select>
-            </Field>
-
-            <Field
-              id="areaOfResidence"
-              label="Area of residence"
-              error={errors.areaOfResidence}
-              hint="No longer asked at registration. Set it here if BCJ wants it on file."
-            >
-              <Input
-                id="areaOfResidence"
-                name="areaOfResidence"
-                defaultValue={participant.areaOfResidence ?? ""}
-                className="h-11"
-              />
-            </Field>
-
-            <Field
-              id="residenceStatus"
-              label="Residence status"
-              error={errors.residenceStatus}
-            >
-              <Select
-                name="residenceStatus"
-                defaultValue={participant.residenceStatus ?? undefined}
-              >
-                <SelectTrigger id="residenceStatus" className="h-11 w-full">
-                  <SelectValue placeholder="Not set" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="bachelor">Bachelor</SelectItem>
-                  <SelectItem value="family">Family</SelectItem>
                 </SelectContent>
               </Select>
             </Field>

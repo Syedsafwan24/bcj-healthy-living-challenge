@@ -241,13 +241,10 @@ export default async function ParticipantDetailPage({
             participant={{
               id: profile.id,
               fullName: profile.fullName,
-              displayName: profile.displayName,
               email: profile.email,
               mobile: profile.mobile,
               age: profile.age,
               gender: profile.gender,
-              areaOfResidence: profile.areaOfResidence,
-              residenceStatus: profile.residenceStatus,
               heightCm: profile.heightCm,
               weightKg: profile.weightKg,
               startingWeightKg: profile.startingWeightKg,

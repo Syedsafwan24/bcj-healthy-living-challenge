@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { genders, residenceStatuses } from "@/db/schema";
+import { genders } from "@/db/schema";
 import { MIN_PASSWORD_LENGTH } from "@/lib/auth/password-policy";
 import { isIsoDate } from "@/lib/dates";
 import { normaliseRegistrationId } from "@/lib/registration-id";
@@ -271,8 +271,9 @@ export const adminEntryCorrectionSchema = dailyEntrySchema.extend({
  */
 export const participantUpdateSchema = z.object({
   participantId: z.uuid(),
+  // Also stands in for the display name (see the note in registrationSchema
+  // above) — there is no separate field for an organiser to diverge it with.
   fullName: trimmed(120),
-  displayName: trimmed(40),
   email: emailSchema,
   mobile: mobileSchema,
   // No longer collected at registration, so an existing record may not have
@@ -280,8 +281,6 @@ export const participantUpdateSchema = z.object({
   // an organiser to also backfill these.
   age: z.coerce.number().int().min(10).max(100).optional().nullable(),
   gender: z.enum(genders),
-  areaOfResidence: trimmed(80).optional().nullable(),
-  residenceStatus: z.enum(residenceStatuses).optional().nullable(),
   heightCm: z.coerce.number().min(50).max(250).optional().nullable(),
   weightKg: z.coerce.number().min(20).max(300).optional().nullable(),
   startingWeightKg: z.coerce.number().min(20).max(300).optional().nullable(),
