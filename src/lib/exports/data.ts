@@ -5,7 +5,6 @@ import { and, asc, eq, gte, inArray, lte, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
   dailyEntries,
-  dietCategories,
   finalScores,
   participantHealth,
   participants,
@@ -69,8 +68,6 @@ async function dailyTable(
       registrationId: participants.registrationId,
       seqNo: participants.seqNo,
       fullName: participants.fullName,
-      displayName: participants.displayName,
-      dietTitle: dietCategories.title,
       entryDate: dailyEntries.entryDate,
       weekNo: dailyEntries.weekNo,
       waterLitres: dailyEntries.waterLitres,
@@ -83,11 +80,6 @@ async function dailyTable(
       c6NoLateFood: dailyEntries.c6NoLateFood,
       c8Mindfulness: dailyEntries.c8Mindfulness,
       c9ScreenTime: dailyEntries.c9ScreenTime,
-      breakfast: dailyEntries.breakfast,
-      midMorning: dailyEntries.midMorning,
-      lunch: dailyEntries.lunch,
-      eveningSnack: dailyEntries.eveningSnack,
-      dinner: dailyEntries.dinner,
       dailyPoints: dailyEntries.dailyPoints,
       maxPoints: dailyEntries.maxPoints,
       dailyPercentage: dailyEntries.dailyPercentage,
@@ -96,7 +88,6 @@ async function dailyTable(
     })
     .from(dailyEntries)
     .innerJoin(participants, eq(participants.id, dailyEntries.participantId))
-    .leftJoin(dietCategories, eq(dietCategories.id, participants.dietCategoryId))
     .where(
       and(gte(dailyEntries.entryDate, first), lte(dailyEntries.entryDate, last)),
     )
@@ -112,8 +103,6 @@ async function dailyTable(
       "No.",
       "Registration ID",
       "Full name",
-      "Display name",
-      "Diet category",
       "Date",
       "Week",
       "C1 water (L)",
@@ -126,13 +115,6 @@ async function dailyTable(
       "C7 sleep (h)",
       "C8 mindfulness",
       "C9 screen time",
-      // Kept so answers given before BCJ reduced the diet section to two
-      // meals are still exported, but marked, because they no longer score.
-      "Breakfast (retired)",
-      "Mid-morning (retired)",
-      "Lunch",
-      "Evening snack (retired)",
-      "Dinner",
       "Points",
       "Maximum",
       "Percentage",
@@ -143,8 +125,6 @@ async function dailyTable(
       r.seqNo,
       r.registrationId,
       r.fullName,
-      r.displayName,
-      r.dietTitle ?? "",
       r.entryDate,
       r.weekNo,
       r.waterLitres ?? "",
@@ -157,11 +137,6 @@ async function dailyTable(
       r.sleepHours ?? "",
       yesNo(r.c8Mindfulness),
       yesNo(r.c9ScreenTime),
-      yesNo(r.breakfast),
-      yesNo(r.midMorning),
-      yesNo(r.lunch),
-      yesNo(r.eveningSnack),
-      yesNo(r.dinner),
       // Number, not the fixed-scale string the numeric column returns, so the
       // Points column stays sortable and summable in Excel.
       Number(r.dailyPoints ?? 0),
@@ -185,12 +160,9 @@ async function weeklyTable(settings: Settings): Promise<ExportTable> {
       seqNo: participants.seqNo,
       registrationId: participants.registrationId,
       fullName: participants.fullName,
-      displayName: participants.displayName,
       status: participants.status,
-      dietTitle: dietCategories.title,
     })
     .from(participants)
-    .leftJoin(dietCategories, eq(dietCategories.id, participants.dietCategoryId))
     .orderBy(asc(participants.seqNo));
 
   const scores = await db
@@ -220,8 +192,6 @@ async function weeklyTable(settings: Settings): Promise<ExportTable> {
       "No.",
       "Registration ID",
       "Full name",
-      "Display name",
-      "Diet category",
       "Status",
       ...weekNumbers.map((w) => `Week ${w} %`),
       "Total",
@@ -234,8 +204,6 @@ async function weeklyTable(settings: Settings): Promise<ExportTable> {
         person.seqNo,
         person.registrationId,
         person.fullName,
-        person.displayName,
-        person.dietTitle ?? "",
         person.status,
         ...values.map((v) => v.toFixed(4)),
         total.toFixed(4),
@@ -259,22 +227,16 @@ async function finalTable(
       seqNo: participants.seqNo,
       registrationId: participants.registrationId,
       fullName: participants.fullName,
-      displayName: participants.displayName,
       email: participants.email,
       mobile: participants.mobile,
       age: participants.age,
       gender: participants.gender,
-      areaOfResidence: participants.areaOfResidence,
-      residenceStatus: participants.residenceStatus,
       weightKg: participants.weightKg,
-      startingWeightKg: participants.startingWeightKg,
       status: participants.status,
-      dietTitle: dietCategories.title,
       finalScore: finalScores.finalScore,
       finalPercentage: finalScores.finalPercentage,
     })
     .from(participants)
-    .leftJoin(dietCategories, eq(dietCategories.id, participants.dietCategoryId))
     .leftJoin(finalScores, eq(finalScores.participantId, participants.id))
     .orderBy(asc(participants.seqNo));
 
@@ -314,16 +276,11 @@ async function finalTable(
     "No.",
     "Registration ID",
     "Full name",
-    "Display name",
     "Email",
     "Mobile",
     "Age",
     "Gender",
-    "Area",
-    "Residence status",
-    "Diet category",
     "Weight (kg)",
-    "Starting weight (kg)",
     "Status",
     "Final score",
     `Maximum (${settings.totalWeeks * 100})`,
@@ -346,16 +303,11 @@ async function finalTable(
         r.seqNo,
         r.registrationId,
         r.fullName,
-        r.displayName,
         r.email,
         r.mobile,
         r.age ?? "",
         r.gender,
-        r.areaOfResidence ?? "",
-        r.residenceStatus ?? "",
-        r.dietTitle ?? "",
         r.weightKg ?? "",
-        r.startingWeightKg ?? "",
         r.status,
         NUMERIC(r.finalScore ?? 0),
         settings.totalWeeks * 100,
@@ -415,23 +367,16 @@ async function participantsTable(
       seqNo: participants.seqNo,
       registrationId: participants.registrationId,
       fullName: participants.fullName,
-      displayName: participants.displayName,
       email: participants.email,
       mobile: participants.mobile,
       age: participants.age,
       gender: participants.gender,
-      areaOfResidence: participants.areaOfResidence,
-      residenceStatus: participants.residenceStatus,
-      heightCm: participants.heightCm,
       weightKg: participants.weightKg,
-      startingWeightKg: participants.startingWeightKg,
-      dietTitle: dietCategories.title,
       status: participants.status,
       registeredAt: participants.registeredAt,
       finalScore: finalScores.finalScore,
     })
     .from(participants)
-    .leftJoin(dietCategories, eq(dietCategories.id, participants.dietCategoryId))
     .leftJoin(finalScores, eq(finalScores.participantId, participants.id))
     .where(sql.join(conditions, sql` AND `))
     .orderBy(asc(participants.seqNo));
@@ -450,17 +395,11 @@ async function participantsTable(
       "No.",
       "Registration ID",
       "Full name",
-      "Display name",
       "Email",
       "Mobile",
       "Age",
       "Gender",
-      "Area",
-      "Residence",
-      "Height (cm)",
       "Weight (kg)",
-      "Starting weight (kg)",
-      "Diet category",
       "Status",
       "Registered",
       "Final score",
@@ -469,17 +408,11 @@ async function participantsTable(
       r.seqNo,
       r.registrationId,
       r.fullName,
-      r.displayName,
       r.email,
       r.mobile,
       r.age ?? "",
       r.gender,
-      r.areaOfResidence ?? "",
-      r.residenceStatus ?? "",
-      r.heightCm ?? "",
       r.weightKg ?? "",
-      r.startingWeightKg ?? "",
-      r.dietTitle ?? "",
       r.status,
       new Intl.DateTimeFormat("en-GB", {
         timeZone: settings.timezone,
