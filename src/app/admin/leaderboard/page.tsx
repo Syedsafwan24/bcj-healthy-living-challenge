@@ -155,7 +155,6 @@ function AdminLeaderboardTable({
             <TableRow>
               <TableHead className="w-16">Rank</TableHead>
               <TableHead>Participant</TableHead>
-              <TableHead className="hidden lg:table-cell">Diet category</TableHead>
               <TableHead className="text-right">Final score</TableHead>
               <TableHead className="hidden text-right sm:table-cell">
                 Percentage
@@ -183,11 +182,6 @@ function AdminLeaderboardTable({
                   <p className="text-xs text-muted-foreground">
                     {row.gender === "male" ? "Male" : "Female"}
                   </p>
-                </TableCell>
-                <TableCell className="hidden text-sm lg:table-cell">
-                  {row.dietCategory ?? (
-                    <span className="text-muted-foreground">Not assigned</span>
-                  )}
                 </TableCell>
                 <TableCell className="tabular text-right font-semibold">
                   {row.finalScore.toFixed(1)}

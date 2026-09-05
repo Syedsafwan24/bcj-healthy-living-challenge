@@ -123,7 +123,6 @@ export default async function ParticipantsPage({
               <TableHead className="hidden md:table-cell">
                 Registration ID
               </TableHead>
-              <TableHead className="hidden lg:table-cell">Diet category</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="hidden text-right xl:table-cell">
                 Final score
@@ -155,11 +154,6 @@ export default async function ParticipantsPage({
                   </TableCell>
                   <TableCell className="hidden md:table-cell">
                     <RegistrationId value={row.registrationId} size="sm" />
-                  </TableCell>
-                  <TableCell className="hidden lg:table-cell">
-                    {row.dietTitle ?? (
-                      <span className="text-muted-foreground">Not assigned</span>
-                    )}
                   </TableCell>
                   <TableCell>
                     <StatusBadge status={row.status} />
