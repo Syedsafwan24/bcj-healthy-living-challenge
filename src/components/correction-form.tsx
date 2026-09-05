@@ -8,7 +8,6 @@ import { correctEntry, type CorrectionState } from "@/app/admin/entries/actions"
 import {
   MealPairRow,
   QuantitativeRow,
-  YesNoButtons,
   YesNoRow,
   type TriState,
 } from "@/components/entry-controls";
@@ -16,7 +15,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { DIET_OCCASIONS, type ChallengeConfig } from "@/lib/challenges";
+import type { ChallengeConfig } from "@/lib/challenges";
 import type { IsoDate } from "@/lib/dates";
 import { scoreEntry, type EntryInputs, type ScoringSettings } from "@/lib/scoring";
 
@@ -228,38 +227,6 @@ export function CorrectionForm({
               />
             ),
           )}
-        </div>
-      </section>
-
-      {/* ---- diet ---- */}
-      <section className="space-y-3">
-        <div className="flex items-baseline justify-between">
-          <h2 className="text-lg font-semibold tracking-tight">Diet</h2>
-          <span className="tabular text-sm font-medium">
-            {preview.dietEarned} / {preview.dietMax}
-          </span>
-        </div>
-        <div className="divide-y rounded-xl border bg-card">
-          {DIET_OCCASIONS.map((occasion) => (
-            <div
-              key={occasion.field}
-              className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between"
-            >
-              <span className="font-medium">{occasion.title}</span>
-              <div className="sm:w-56">
-                <input
-                  type="hidden"
-                  name={occasion.field}
-                  value={values[occasion.field]}
-                />
-                <YesNoButtons
-                  label={occasion.title}
-                  value={values[occasion.field]}
-                  onChange={(next) => set(occasion.field, next)}
-                />
-              </div>
-            </div>
-          ))}
         </div>
       </section>
 

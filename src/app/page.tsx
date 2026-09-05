@@ -6,7 +6,7 @@ import { PublicShell } from "@/components/public-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { CHALLENGES, DIET_OCCASIONS } from "@/lib/challenges";
+import { CHALLENGES } from "@/lib/challenges";
 
 /**
  * Dynamically rendered so the per-request CSP nonce from `src/middleware.ts`
@@ -117,11 +117,11 @@ export default function HomePage() {
           </ol>
 
           <div className="mt-6 rounded-xl border bg-card p-5">
-            <p className="font-medium">Your diet plan, every day from week one</p>
+            <p className="font-medium">Your diet plan</p>
             <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-              {DIET_OCCASIONS.map((o) => o.title).join(", ")} — five points each,
-              ten in total. BCJ assigns your plan from your age and weight when
-              your registration is approved.
+              BCJ assigns you a plan from your age and weight when your
+              registration is approved. It is guidance for the challenges
+              above rather than a separate score.
             </p>
           </div>
         </div>

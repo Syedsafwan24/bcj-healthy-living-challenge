@@ -1,12 +1,10 @@
-import { Info, Utensils } from "lucide-react";
+import { Info } from "lucide-react";
 import type { Metadata } from "next";
 
 import { MetricIcon } from "@/components/metric";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireParticipant } from "@/lib/auth/guards";
-import { DIET_OCCASIONS, POINTS_PER_DIET_OCCASION } from "@/lib/challenges";
 import { getParticipantProfile } from "@/lib/queries";
 
 export const metadata: Metadata = { title: "My plan", robots: { index: false } };
@@ -61,62 +59,25 @@ export default async function PlanPage() {
           <AlertTitle>No plan assigned yet</AlertTitle>
           <AlertDescription>
             A BCJ organiser assigns your diet category when they review your
-            registration. Your lunch and dinner still count towards your score
-            in the meantime.
+            registration.
           </AlertDescription>
         </Alert>
       )}
 
-      <section className="space-y-3">
-        <div className="flex items-baseline justify-between">
-          <h2 className="text-lg font-semibold tracking-tight">
-            Your two main meals
-          </h2>
-          <Badge variant="secondary">10 points a day</Badge>
-        </div>
-
-        <ul className="divide-y overflow-hidden rounded-xl border bg-card">
-          {DIET_OCCASIONS.map((occasion) => (
-            <li key={occasion.field} className="flex items-center gap-3 p-4">
-              <span
-                aria-hidden
-                className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg"
-                style={{
-                  background:
-                    "color-mix(in oklch, var(--color-metric-nutrition) 14%, transparent)",
-                  color: "var(--color-metric-nutrition)",
-                }}
-              >
-                <Utensils size={16} />
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="font-medium">{occasion.title}</p>
-                <p className="text-sm text-muted-foreground">
-                  Answer Yes when you followed your approved plan for this
-                  meal.
-                </p>
-              </div>
-              <span className="tabular shrink-0 text-sm font-semibold">
-                {POINTS_PER_DIET_OCCASION} pts
-              </span>
-            </li>
-          ))}
-        </ul>
-      </section>
-
       <Alert>
         <Info className="size-4" />
-        <AlertTitle>What counts as following the plan</AlertTitle>
+        <AlertTitle>How your plan is used</AlertTitle>
         <AlertDescription>
-          Answer Yes for a meal when you ate what your assigned plan sets
-          out for it. If you are unsure, ask a BCJ organiser rather than
-          guessing — the same rule has to apply to everyone.
+          Your plan is guidance from the BCJ nutrition team for your category.
+          It is not scored on its own — your daily points come from the
+          lifestyle challenges. If you are unsure what your plan asks for, ask
+          a BCJ organiser rather than guessing.
         </AlertDescription>
       </Alert>
 
       <p className="text-sm leading-relaxed text-muted-foreground">
-        Your diet score counts every day from week 1 and is part of your
-        ordinary daily score, not a bonus and not a tie-breaker.
+        Eating vegetables with your main meals is scored from week 5 as one of
+        the twelve weekly challenges, on the Today screen.
       </p>
     </div>
   );

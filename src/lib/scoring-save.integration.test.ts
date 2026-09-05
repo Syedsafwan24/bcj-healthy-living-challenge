@@ -97,14 +97,15 @@ suite("scoring-save against the database", () => {
     });
 
     expect(saved.weekNo).toBe(2);
-    // Steps 7,400 earns 7.4, not 7 — partial credit, steps only.
-    expect(saved.dailyPoints).toBe(20.4);
-    expect(saved.maxPoints).toBe(30);
-    expect(saved.dailyPercentage).toBe(68.0);
+    // Steps 7,400 earns 7.4, not 7 — partial credit, steps only. The diet
+    // score is gone, so the day is worth its two challenges alone.
+    expect(saved.dailyPoints).toBe(15.4);
+    expect(saved.maxPoints).toBe(20);
+    expect(saved.dailyPercentage).toBe(77.0);
 
-    // One day of 68.0 across a seven-day week.
-    expect(saved.weekPercentage).toBe(9.7143);
-    expect(saved.finalScore).toBe(9.7143);
+    // One day of 77.0 across a seven-day week.
+    expect(saved.weekPercentage).toBe(11.0);
+    expect(saved.finalScore).toBe(11.0);
 
     // The three calculated columns are on the row, and no endpoint wrote them.
     const [stored] = await db
@@ -119,9 +120,9 @@ suite("scoring-save against the database", () => {
 
     expect(stored.weekNo).toBe(2);
     // Stored as numeric, so it comes back a fixed-scale string.
-    expect(Number(stored.dailyPoints)).toBe(20.4);
-    expect(stored.maxPoints).toBe(30);
-    expect(Number(stored.dailyPercentage)).toBe(68.0);
+    expect(Number(stored.dailyPoints)).toBe(15.4);
+    expect(stored.maxPoints).toBe(20);
+    expect(Number(stored.dailyPercentage)).toBe(77.0);
     expect(stored.status).toBe("submitted");
   });
 
@@ -154,7 +155,7 @@ suite("scoring-save against the database", () => {
       );
 
     expect(rows).toHaveLength(1);
-    expect(Number(rows[0].dailyPoints)).toBe(30); // 10 + 10 + 10 diet
+    expect(Number(rows[0].dailyPoints)).toBe(20); // 10 water + 10 steps
 
     // A direct insert bypassing ON CONFLICT is refused by the constraint.
     await expect(
@@ -225,9 +226,9 @@ suite("scoring-save against the database", () => {
     });
 
     expect(saved.weekNo).toBe(2);
-    expect(saved.maxPoints).toBe(30);
-    expect(saved.dailyPoints).toBe(20.4);
-    expect(saved.dailyPercentage).toBe(68.0);
+    expect(saved.maxPoints).toBe(20);
+    expect(saved.dailyPoints).toBe(15.4);
+    expect(saved.dailyPercentage).toBe(77.0);
   });
 
   it("recomputing a participant leaves every stored score unchanged", async () => {
@@ -262,7 +263,7 @@ suite("scoring-save against the database", () => {
 
     expect(saved.weekNo).toBe(4);
     expect(saved.dailyPoints).toBe(0);
-    expect(saved.maxPoints).toBe(50); // vector T6
+    expect(saved.maxPoints).toBe(40); // vector T6, without the diet score
     expect(saved.dailyPercentage).toBe(0);
   });
 });

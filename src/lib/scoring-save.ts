@@ -128,14 +128,12 @@ export async function saveEntry(
           c6NoLateFood: write.c6NoLateFood ?? null,
           c8Mindfulness: write.c8Mindfulness ?? null,
           c9ScreenTime: write.c9ScreenTime ?? null,
-          lunch: write.lunch ?? null,
-          dinner: write.dinner ?? null,
-          // breakfast, mid_morning and evening_snack are deliberately absent.
-          // BCJ retired those occasions, so no form submits them any more and
-          // they would arrive here as null — which would quietly wipe the
-          // answers a participant gave before the rule changed, the first
-          // time anyone corrected one of those days. They score nothing
-          // either way; an edit simply leaves them as they were.
+          // All five meal columns are deliberately absent. BCJ removed the
+          // diet score entirely, so no form submits them any more and they
+          // would arrive here as null — which would quietly wipe the answers
+          // participants gave before the rule changed, the first time anyone
+          // corrected one of those days. They score nothing either way; an
+          // edit simply leaves them as they were.
           dailyPoints: String(score.dailyPoints),
           maxPoints: score.maxPoints,
           dailyPercentage: String(score.dailyPercentage),

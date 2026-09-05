@@ -3,13 +3,12 @@
 import { useActionState, useEffect, useMemo, useState } from "react";
 import { useFormStatus } from "react-dom";
 import Link from "next/link";
-import { CheckCircle2, Lock, Utensils } from "lucide-react";
+import { CheckCircle2, Lock } from "lucide-react";
 import { toast } from "sonner";
 
 import {
   MealPairRow,
   QuantitativeRow,
-  YesNoButtons,
   YesNoRow,
   type TriState,
 } from "@/components/entry-controls";
@@ -17,9 +16,8 @@ import { ScoreRing } from "@/components/score-ring";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { submitDay, type EntryState } from "@/app/app/actions";
-import { DIET_OCCASIONS, type ChallengeConfig } from "@/lib/challenges";
+import type { ChallengeConfig } from "@/lib/challenges";
 import type { IsoDate } from "@/lib/dates";
 import {
   scoreEntry,
@@ -120,7 +118,6 @@ export function DailyEntryForm({
   alreadySubmitted,
   weekNo,
   isRepeatPhase,
-  dietPlanNote,
 }: {
   entryDate: IsoDate;
   settings: ScoringSettings;
@@ -131,7 +128,6 @@ export function DailyEntryForm({
   alreadySubmitted: boolean;
   weekNo: number;
   isRepeatPhase: boolean;
-  dietPlanNote?: string;
 }) {
   const [values, setValues] = useState<DailyFormValues>(initialValues);
   // Cleared as soon as an answer changes, so the panel never reports a score
@@ -183,8 +179,6 @@ export function DailyEntryForm({
   const continuing = activeChallenges.filter(
     (c) => !newThisWeek.includes(c),
   );
-
-  const dietAnswered = preview.diet.filter((d) => d.answered).length;
 
   function set<K extends keyof DailyFormValues>(key: K, value: DailyFormValues[K]) {
     setDirtySinceSave(true);
@@ -359,62 +353,6 @@ export function DailyEntryForm({
           )}
         </>
       )}
-
-      <Separator />
-
-      {/* ---- diet, two main meals worth 5 points each ---- */}
-      <section className="space-y-3">
-        <div className="flex items-baseline justify-between gap-3">
-          <h2 className="text-lg font-semibold tracking-tight">Your diet plan</h2>
-          <span className="tabular text-sm font-medium">
-            {preview.dietEarned} / {preview.dietMax}
-          </span>
-        </div>
-        <p className="text-sm leading-relaxed text-muted-foreground">
-          {dietPlanNote ??
-            "Five points for each meal you followed your approved BCJ plan."}
-        </p>
-
-        <div className="divide-y rounded-xl border bg-card">
-          {DIET_OCCASIONS.map((occasion) => {
-            const value = values[occasion.field] as TriState;
-            return (
-              <div
-                key={occasion.field}
-                className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between"
-              >
-                <div className="flex items-center gap-3">
-                  <span
-                    aria-hidden
-                    className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg"
-                    style={{
-                      background:
-                        "color-mix(in oklch, var(--color-metric-nutrition) 14%, transparent)",
-                      color: "var(--color-metric-nutrition)",
-                    }}
-                  >
-                    <Utensils size={16} />
-                  </span>
-                  <span className="font-medium">{occasion.title}</span>
-                </div>
-                <div className="sm:w-56">
-                  <input type="hidden" name={occasion.field} value={value} />
-                  <YesNoButtons
-                    label={occasion.title}
-                    value={value}
-                    onChange={(next) => set(occasion.field, next)}
-                    disabled={readOnly}
-                    size="sm"
-                  />
-                </div>
-              </div>
-            );
-          })}
-        </div>
-        <p className="tabular text-xs text-muted-foreground">
-          {dietAnswered} of {DIET_OCCASIONS.length} answered.
-        </p>
-      </section>
 
       {!readOnly && (
         <div className="sticky bottom-20 z-30 -mx-5 border-t bg-background/95 px-5 py-4 backdrop-blur md:bottom-0">

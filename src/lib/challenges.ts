@@ -189,35 +189,20 @@ export const CHALLENGES: readonly ChallengeConfig[] = [
   },
 ] as const;
 
-/** Diet occasions — specification section 4.4. See DIET_OCCASIONS below. */
+/**
+ * The five meal columns on daily_entries.
+ *
+ * BCJ removed the separate diet score on 5 September 2026: a day is now
+ * worth the lifestyle challenges alone, and eating well is scored through C5
+ * instead. The columns stay so the answers already given are not destroyed,
+ * and this type still names them, but nothing scores them.
+ */
 export type DietField =
   | "breakfast"
   | "midMorning"
   | "lunch"
   | "eveningSnack"
   | "dinner";
-
-export interface DietOccasion {
-  field: DietField;
-  title: string;
-}
-
-/**
- * BCJ reduced the diet section to the two main meals on 4 September 2026.
- * It was five occasions worth two points each; it is now two worth five, so
- * the diet total is still 10 and every daily maximum is unchanged.
- *
- * breakfast, mid_morning and evening_snack remain as nullable columns on
- * daily_entries so existing answers are not destroyed, but nothing asks for
- * them and nothing scores them any more.
- */
-export const DIET_OCCASIONS: readonly DietOccasion[] = [
-  { field: "lunch", title: "Lunch" },
-  { field: "dinner", title: "Dinner" },
-] as const;
-
-export const POINTS_PER_DIET_OCCASION = 5;
-export const DIET_MAX = DIET_OCCASIONS.length * POINTS_PER_DIET_OCCASION; // 10
 
 export function challengeByRef(ref: ChallengeRef): ChallengeConfig {
   const found = CHALLENGES.find((c) => c.ref === ref);

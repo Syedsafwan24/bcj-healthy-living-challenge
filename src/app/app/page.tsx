@@ -256,11 +256,6 @@ export default async function TodayPage({
         alreadySubmitted={alreadySubmitted}
         weekNo={weekNo}
         isRepeatPhase={isRepeatPhase}
-        dietPlanNote={
-          profile?.dietTitle
-            ? `Five points for each meal you followed your ${profile.dietTitle} plan.`
-            : undefined
-        }
       />
 
       {/* ---- weekly progress and final score, V6 section 6 ---- */}

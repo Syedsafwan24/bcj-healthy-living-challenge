@@ -10,14 +10,10 @@
 
 import {
   CHALLENGES,
-  DIET_MAX,
-  DIET_OCCASIONS,
   MAX_POINTS_PER_CHALLENGE,
-  POINTS_PER_DIET_OCCASION,
   POINTS_PER_MEAL_HALF,
   type ChallengeConfig,
   type ChallengeRef,
-  type DietField,
 } from "./challenges";
 import { weekNoFor, type IsoDate } from "./dates";
 
@@ -65,24 +61,13 @@ export interface ChallengeScore {
   answered: boolean;
 }
 
-export interface DietScore {
-  field: DietField;
-  title: string;
-  points: number;
-  value: boolean | null;
-  answered: boolean;
-}
-
 export interface DailyScore {
   weekNo: number;
   /** Number of lifestyle challenges active in this entry's week. */
   activeChallenges: number;
   challenges: ChallengeScore[];
-  diet: DietScore[];
   lifestyleEarned: number;
   lifestyleMax: number;
-  dietEarned: number;
-  dietMax: number;
   dailyPoints: number;
   maxPoints: number;
   /** Rounded to 4 decimal places. Round again only for display. */
@@ -207,8 +192,8 @@ function readValue(
 /**
  * Scores one day — section 4.5.
  *
- *   dailyPoints     = lifestyleEarned + dietEarned
- *   maxPoints       = activeChallenges * 10 + 10
+ *   dailyPoints     = lifestyleEarned
+ *   maxPoints       = activeChallenges * 10
  *   dailyPercentage = dailyPoints / maxPoints * 100
  *
  * `entryDate` decides the week, and therefore the active set and the maximum.
@@ -256,26 +241,11 @@ export function scoreEntry(
     };
   });
 
-  // Diet is active every day from week 1 and is part of the ordinary score,
-  // not a bonus and not a tie-breaker — section 4.4.
-  const diet: DietScore[] = DIET_OCCASIONS.map((occasion) => {
-    const raw = inputs[occasion.field];
-    const value = raw === undefined ? null : raw;
-    return {
-      field: occasion.field,
-      title: occasion.title,
-      points: value === true ? POINTS_PER_DIET_OCCASION : 0,
-      value,
-      answered: value !== null,
-    };
-  });
-
   const lifestyleEarned = sumPoints(challenges.map((c) => c.points));
   const lifestyleMax = active.length * MAX_POINTS_PER_CHALLENGE;
-  const dietEarned = sumPoints(diet.map((d) => d.points));
 
-  const dailyPoints = sumPoints([lifestyleEarned, dietEarned]);
-  const maxPoints = lifestyleMax + DIET_MAX;
+  const dailyPoints = lifestyleEarned;
+  const maxPoints = lifestyleMax;
   const dailyPercentage =
     maxPoints === 0 ? 0 : round4((dailyPoints / maxPoints) * 100);
 
@@ -283,11 +253,8 @@ export function scoreEntry(
     weekNo,
     activeChallenges: active.length,
     challenges,
-    diet,
     lifestyleEarned,
     lifestyleMax,
-    dietEarned,
-    dietMax: DIET_MAX,
     dailyPoints,
     maxPoints,
     dailyPercentage,
@@ -312,8 +279,7 @@ export function dailyMaxForWeek(
 ): number {
   return (
     activeChallengesForWeek(weekNo, maxActiveWeek).length *
-      MAX_POINTS_PER_CHALLENGE +
-    DIET_MAX
+    MAX_POINTS_PER_CHALLENGE
   );
 }
 
