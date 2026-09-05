@@ -16,7 +16,6 @@ import { requireParticipant } from "@/lib/auth/guards";
 import {
   getLeaderboard,
   groupLeaderboard,
-  leaderboardCategories,
   type LeaderboardGroup,
   type LeaderboardSegment,
 } from "@/lib/queries";
@@ -49,17 +48,17 @@ export const dynamic = "force-dynamic";
  * gold-500 measures 2.38:1 and fails (section 9.2).
  */
 
-// Category + gender is the default: it is the division BCJ awards prizes on.
+// Men and women is the default: it is the division BCJ awards prizes on.
 // Overall stays available as the single ranking V6 section 9 defines.
 const SEGMENTS: Array<{ value: LeaderboardSegment; label: string }> = [
-  { value: "diet_gender", label: "Diet category + gender" },
+  { value: "gender", label: "Men and women" },
   { value: "overall", label: "Overall" },
 ];
 
 export default async function LeaderboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ by?: string; cat?: string }>;
+  searchParams: Promise<{ by?: string }>;
 }) {
   // Hidden from participants at BCJ's request. Enforced here rather than only
   // in the navigation, so typing the URL does not reach it either.
@@ -71,20 +70,11 @@ export default async function LeaderboardPage({
 
   const segment: LeaderboardSegment = SEGMENTS.some((s) => s.value === params.by)
     ? (params.by as LeaderboardSegment)
-    : "diet_gender";
+    : "gender";
 
   const rows = await getLeaderboard();
-  const allGroups = groupLeaderboard(rows, segment);
+  const groups = groupLeaderboard(rows, segment);
 
-  // One tab per diet category. With six categories the divided board is
-  // twelve stacked tables, which is a lot of scrolling to compare the two
-  // halves of one category — the comparison an organiser actually makes.
-  const categories = segment === "diet_gender" ? leaderboardCategories(allGroups) : [];
-  const category =
-    categories.some((c) => c.code === params.cat) ? params.cat : undefined;
-  const groups = category
-    ? allGroups.filter((g) => g.categoryCode === category)
-    : allGroups;
   const maxScore = settings.totalWeeks * 100;
 
   return (
@@ -111,7 +101,7 @@ export default async function LeaderboardPage({
           >
             <Link
               href={
-                option.value === "diet_gender"
+                option.value === "gender"
                   ? "/app/leaderboard"
                   : `/app/leaderboard?by=${option.value}`
               }
@@ -122,35 +112,6 @@ export default async function LeaderboardPage({
         ))}
       </div>
 
-      {categories.length > 1 && (
-        <div
-          className="flex flex-wrap gap-1 rounded-lg border bg-card p-1"
-          role="group"
-          aria-label="Diet category"
-        >
-          <Button
-            asChild
-            size="sm"
-            variant={category ? "ghost" : "secondary"}
-            className="h-11"
-          >
-            <Link href="/app/leaderboard">All categories</Link>
-          </Button>
-          {categories.map((option) => (
-            <Button
-              key={option.code}
-              asChild
-              size="sm"
-              variant={category === option.code ? "secondary" : "ghost"}
-              className="h-11"
-            >
-              <Link href={`/app/leaderboard?cat=${encodeURIComponent(option.code)}`}>
-                {option.title}
-              </Link>
-            </Button>
-          ))}
-        </div>
-      )}
 
       {rows.length === 0 ? (
         <div className="rounded-xl border bg-card py-16 text-center">
@@ -176,7 +137,7 @@ export default async function LeaderboardPage({
       <p className="text-sm leading-relaxed text-muted-foreground">
         {segment === "overall"
           ? "Only display names appear here. Registration IDs, contact details and health information are never shown on the leaderboard."
-          : "Each diet category is ranked separately for men and for women. Every division is scored the same way — each day counts as a percentage of that day's own maximum — so no group is advantaged."}
+          : "Men and women are ranked separately. Both divisions are scored the same way — each day counts as a percentage of that day's own maximum — so neither is advantaged."}
       </p>
     </div>
   );

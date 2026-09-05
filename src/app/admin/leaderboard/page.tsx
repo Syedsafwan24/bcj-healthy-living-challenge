@@ -16,7 +16,6 @@ import { requireAdmin } from "@/lib/auth/guards";
 import {
   getLeaderboard,
   groupLeaderboard,
-  leaderboardCategories,
   type LeaderboardGroup,
   type LeaderboardSegment,
 } from "@/lib/queries";
@@ -40,17 +39,17 @@ export const dynamic = "force-dynamic";
  * chose similar display names is exactly what an organiser needs.
  */
 
-// Category + gender is the default: it is the division BCJ awards prizes on.
+// Men and women is the default: it is the division BCJ awards prizes on.
 // Overall stays available as the single ranking V6 section 9 defines.
 const SEGMENTS: Array<{ value: LeaderboardSegment; label: string }> = [
-  { value: "diet_gender", label: "Diet category + gender" },
+  { value: "gender", label: "Men and women" },
   { value: "overall", label: "Overall" },
 ];
 
 export default async function AdminLeaderboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ by?: string; cat?: string }>;
+  searchParams: Promise<{ by?: string }>;
 }) {
   await requireAdmin();
   const settings = await getSettings();
@@ -58,20 +57,11 @@ export default async function AdminLeaderboardPage({
 
   const segment: LeaderboardSegment = SEGMENTS.some((s) => s.value === params.by)
     ? (params.by as LeaderboardSegment)
-    : "diet_gender";
+    : "gender";
 
   const rows = await getLeaderboard();
-  const allGroups = groupLeaderboard(rows, segment);
+  const groups = groupLeaderboard(rows, segment);
 
-  // One tab per diet category. With six categories the divided board is
-  // twelve stacked tables, which is a lot of scrolling to compare the two
-  // halves of one category — the comparison an organiser actually makes.
-  const categories = segment === "diet_gender" ? leaderboardCategories(allGroups) : [];
-  const category =
-    categories.some((c) => c.code === params.cat) ? params.cat : undefined;
-  const groups = category
-    ? allGroups.filter((g) => g.categoryCode === category)
-    : allGroups;
   const maxScore = settings.totalWeeks * 100;
 
   return (
@@ -99,7 +89,7 @@ export default async function AdminLeaderboardPage({
           >
             <Link
               href={
-                option.value === "diet_gender"
+                option.value === "gender"
                   ? "/admin/leaderboard"
                   : `/admin/leaderboard?by=${option.value}`
               }
@@ -110,35 +100,6 @@ export default async function AdminLeaderboardPage({
         ))}
       </div>
 
-      {categories.length > 1 && (
-        <div
-          className="flex flex-wrap gap-1 rounded-lg border bg-card p-1"
-          role="group"
-          aria-label="Diet category"
-        >
-          <Button
-            asChild
-            size="sm"
-            variant={category ? "ghost" : "secondary"}
-            className="h-11"
-          >
-            <Link href="/admin/leaderboard">All categories</Link>
-          </Button>
-          {categories.map((option) => (
-            <Button
-              key={option.code}
-              asChild
-              size="sm"
-              variant={category === option.code ? "secondary" : "ghost"}
-              className="h-11"
-            >
-              <Link href={`/admin/leaderboard?cat=${encodeURIComponent(option.code)}`}>
-                {option.title}
-              </Link>
-            </Button>
-          ))}
-        </div>
-      )}
 
       {rows.length === 0 ? (
         <div className="rounded-xl border bg-card py-16 text-center">
@@ -161,9 +122,9 @@ export default async function AdminLeaderboardPage({
       )}
 
       <p className="text-sm leading-relaxed text-muted-foreground">
-        {segment === "diet_gender"
-          ? "Prizes are decided on these divisions: each diet category is split by gender, and every division is ranked from 1. Only active participants appear; anyone on hold is excluded."
-          : "Overall is the single ranking the challenge rules define. Prizes are decided on the diet category and gender divisions. Only active participants appear; anyone on hold is excluded."}
+        {segment === "gender"
+          ? "Prizes are decided on these divisions: men and women are ranked separately, each from 1. Only active participants appear; anyone on hold is excluded."
+          : "Overall is the single ranking the challenge rules define. Prizes are decided on the men and women divisions. Only active participants appear; anyone on hold is excluded."}
       </p>
     </div>
   );

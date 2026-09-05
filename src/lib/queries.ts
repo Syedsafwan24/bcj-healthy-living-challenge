@@ -189,52 +189,22 @@ export interface LeaderboardRow {
 }
 
 /**
- * How the leaderboard is divided. "overall" is the ranking V6 section 9
- * defines; the rest are divisions BCJ asked for.
+ * How the leaderboard is divided. "overall" is the single ranking V6 section
+ * 9 defines; "gender" is the division BCJ awards prizes on.
  *
- * "diet_gender" is the division prizes are decided on: one group per diet
- * category per gender. Diet category alone and gender alone are deliberately
- * not offered — BCJ judges on the pair, and a half-division would invite the
- * wrong winner to be read off the screen.
+ * It was diet category and gender together until 5 September 2026. Two
+ * changes made that unworkable: weight became optional at registration, so
+ * the category it derives from is often absent, and the diet score was
+ * removed, so the category no longer affects a single point. Grouping by it
+ * meant a "No diet category assigned" division that was not a prize class at
+ * all. Gender is asked of everyone, so every participant lands somewhere real.
  */
-export type LeaderboardSegment = "overall" | "diet_gender";
+export type LeaderboardSegment = "overall" | "gender";
 
 export interface LeaderboardGroup {
   key: string;
   title: string;
-  /**
-   * The diet category this division belongs to, so a page can offer one tab
-   * per category without parsing the key or the title. "overall" for the
-   * undivided board.
-   */
-  categoryCode: string;
-  categoryTitle: string;
   rows: LeaderboardRow[];
-}
-
-/** One entry per diet category present on the board, in the category order. */
-export interface LeaderboardCategory {
-  code: string;
-  title: string;
-}
-
-/**
- * The categories represented in a set of divisions, in the order the divisions
- * are already in — which is diet sort order, so the tabs match the page.
- */
-export function leaderboardCategories(
-  groups: LeaderboardGroup[],
-): LeaderboardCategory[] {
-  const seen = new Map<string, LeaderboardCategory>();
-  for (const group of groups) {
-    if (!seen.has(group.categoryCode)) {
-      seen.set(group.categoryCode, {
-        code: group.categoryCode,
-        title: group.categoryTitle,
-      });
-    }
-  }
-  return Array.from(seen.values());
 }
 
 /**
@@ -314,50 +284,22 @@ export function groupLeaderboard(
   segment: LeaderboardSegment,
 ): LeaderboardGroup[] {
   if (segment === "overall") {
-    return [
-      {
-        key: "overall",
-        title: "Overall",
-        categoryCode: "overall",
-        categoryTitle: "Overall",
-        rows,
-      },
-    ];
+    return [{ key: "overall", title: "Overall", rows }];
   }
 
+  // Men and women are never ranked against each other. Every participant
+  // gives a gender at registration, so both divisions are always real.
   const buckets = new Map<
     string,
-    {
-      title: string;
-      categoryCode: string;
-      categoryTitle: string;
-      sort: number;
-      rows: LeaderboardRow[];
-    }
+    { title: string; sort: number; rows: LeaderboardRow[] }
   >();
 
-  // One division per diet category per gender. Men and women are never ranked
-  // against each other, and a category on its own is not a division: BCJ
-  // decides prizes on the pair, so "50 to 60 kg" splits into "50 to 60 kg
-  // · Men" and "50 to 60 kg · Women".
   for (const row of rows) {
-    const genderLabel = row.gender === "male" ? "Men" : "Women";
-    const genderSort = row.gender === "male" ? 0 : 1;
-    const diet = row.dietCategory ?? "No diet category assigned";
-    const dietKey = row.dietCode ?? "unassigned";
-
-    const key = `${dietKey}|${row.gender}`;
-    const title = `${diet} · ${genderLabel}`;
-    // Category first, then gender within it, so the two halves of a category
-    // always sit next to each other on the page.
-    const sort = row.dietSort * 10 + genderSort;
-
+    const key = row.gender;
     if (!buckets.has(key)) {
       buckets.set(key, {
-        title,
-        categoryCode: dietKey,
-        categoryTitle: diet,
-        sort,
+        title: row.gender === "male" ? "Men" : "Women",
+        sort: row.gender === "male" ? 0 : 1,
         rows: [],
       });
     }
@@ -369,9 +311,7 @@ export function groupLeaderboard(
     .map(([key, bucket]) => ({
       key,
       title: bucket.title,
-      categoryCode: bucket.categoryCode,
-      categoryTitle: bucket.categoryTitle,
-      // Already ordered by score; re-rank from 1 inside the group.
+      // Already ordered by score; re-rank from 1 inside the division.
       rows: rank(bucket.rows.map((r) => ({ ...r, rank: 0 }))),
     }));
 }

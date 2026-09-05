@@ -50,7 +50,6 @@ function row(
 suite("leaderboard divisions", () => {
   /* eslint-disable @typescript-eslint/no-explicit-any */
   let groupLeaderboard: any;
-  let leaderboardCategories: any;
 
   // Ordered by score descending, as getLeaderboard returns them.
   const rows = [
@@ -63,44 +62,44 @@ suite("leaderboard divisions", () => {
   ];
 
   it("loads", async () => {
-    ({ groupLeaderboard, leaderboardCategories } = await import("@/lib/queries"));
+    ({ groupLeaderboard } = await import("@/lib/queries"));
     expect(typeof groupLeaderboard).toBe("function");
   });
 
-  it("splits each diet category by gender", () => {
-    const groups = groupLeaderboard(rows, "diet_gender");
-    expect(groups.map((g: any) => g.title)).toEqual([
-      "A category · Men",
-      "A category · Women",
-      "B category · Men",
-      "B category · Women",
-    ]);
+  it("splits the board into men and women, men first", () => {
+    const groups = groupLeaderboard(rows, "gender");
+    expect(groups.map((g: any) => g.title)).toEqual(["Men", "Women"]);
   });
 
   it("ranks each division from 1, not from the overall position", () => {
-    const groups = groupLeaderboard(rows, "diet_gender");
-    const menA = groups.find((g: any) => g.title === "A category · Men");
-    // Bilal is 2nd overall but 1st among men in category A.
-    expect(menA.rows.map((r: any) => [r.displayName, r.rank])).toEqual([
+    const groups = groupLeaderboard(rows, "gender");
+    const men = groups.find((g: any) => g.title === "Men");
+    // Bilal is 2nd overall but 1st among the men.
+    expect(men.rows.map((r: any) => [r.displayName, r.rank])).toEqual([
       ["Bilal", 1],
-      ["Yusuf", 2],
+      ["Imran", 2],
+      ["Yusuf", 3],
     ]);
   });
 
   it("never puts men and women in the same division", () => {
-    for (const group of groupLeaderboard(rows, "diet_gender")) {
+    for (const group of groupLeaderboard(rows, "gender")) {
       const genders = new Set(group.rows.map((r: any) => r.gender));
       expect(genders.size).toBe(1);
     }
   });
 
-  it("tags every division with the category its tab belongs to", () => {
-    const groups = groupLeaderboard(rows, "diet_gender");
-    expect(groups.filter((g: any) => g.categoryCode === "A")).toHaveLength(2);
-    expect(leaderboardCategories(groups)).toEqual([
-      { code: "A", title: "A category" },
-      { code: "B", title: "B category" },
-    ]);
+  it("puts everyone in a division, with or without a diet category", () => {
+    // Weight is optional at registration, so the diet category it derives
+    // from is often missing. Gender is asked of everyone, so nobody lands in
+    // an "unassigned" bucket the way they did under the old grouping.
+    const groups = groupLeaderboard(
+      [...rows, row("Omar", "male", null, 99, 300)],
+      "gender",
+    );
+    expect(groups).toHaveLength(2);
+    const counted = groups.reduce((n: number, g: any) => n + g.rows.length, 0);
+    expect(counted).toBe(rows.length + 1);
   });
 
   it("keeps everyone in one group when undivided", () => {
@@ -109,13 +108,4 @@ suite("leaderboard divisions", () => {
     expect(groups[0].rows).toHaveLength(rows.length);
   });
 
-  it("gives participants with no category a division of their own", () => {
-    const groups = groupLeaderboard(
-      [...rows, row("Omar", "male", null, 99, 300)],
-      "diet_gender",
-    );
-    const orphan = groups.find((g: any) => g.categoryCode === "unassigned");
-    expect(orphan.title).toBe("No diet category assigned · Men");
-    expect(orphan.rows.map((r: any) => r.displayName)).toEqual(["Omar"]);
-  });
 });
