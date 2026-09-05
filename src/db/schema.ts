@@ -276,7 +276,9 @@ export const dailyEntries = pgTable(
     dinner: boolean("dinner"),
 
     /** Written by the server only. No endpoint accepts these. */
-    dailyPoints: integer("daily_points"),
+    // Numeric, not integer: steps award a fraction of a point (6,900 steps
+    // is 6.9), so a day's total can carry two decimal places.
+    dailyPoints: numeric("daily_points", { precision: 6, scale: 2 }),
     maxPoints: integer("max_points"),
     dailyPercentage: numeric("daily_percentage", { precision: 9, scale: 4 }),
 

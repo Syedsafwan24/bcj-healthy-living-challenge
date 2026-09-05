@@ -103,16 +103,55 @@ export function quantitativePoints(
   value: number | null | undefined,
   unit: number,
   precision: number,
+  partialCredit = false,
 ): number {
   if (value === null || value === undefined || Number.isNaN(value)) return 0;
   if (value <= 0) return 0;
   const scale = 10 ** precision;
   const scaledValue = Math.round(value * scale);
   const scaledUnit = Math.round(unit * scale);
-  return Math.min(
-    Math.floor(scaledValue / scaledUnit),
-    MAX_POINTS_PER_CHALLENGE,
+
+  if (!partialCredit) {
+    return Math.min(
+      Math.floor(scaledValue / scaledUnit),
+      MAX_POINTS_PER_CHALLENGE,
+    );
+  }
+
+  // Partial credit (steps only, at BCJ's request): 6,900 steps earns 6.9
+  // rather than 6. Truncated to POINT_DECIMALS rather than rounded, for the
+  // same reason the whole-point rule floors — a value short of the next point
+  // must never be shown as having reached it, so 6,999 steps is 6.99, not 7.
+  const factor = 10 ** POINT_DECIMALS;
+  const truncated = Math.floor((scaledValue * factor) / scaledUnit) / factor;
+  return Math.min(truncated, MAX_POINTS_PER_CHALLENGE);
+}
+
+/**
+ * Decimal places a point value is held to. Only steps can produce a fraction,
+ * and two places is enough for a unit of 1,000 steps: the smallest step that
+ * moves the score is 10 steps.
+ */
+export const POINT_DECIMALS = 2;
+
+/** Sums point values without leaving float dust like 16.900000000000002. */
+function sumPoints(values: number[]): number {
+  const factor = 10 ** POINT_DECIMALS;
+  return (
+    values.reduce((sum, v) => sum + Math.round(v * factor), 0) / factor
   );
+}
+
+/**
+ * A point value for display. Steps can award a fraction, and the database
+ * hands back a fixed-scale string ("6.90"), so trailing zeros are trimmed:
+ * 6.90 reads as 6.9 and 15.00 as 15.
+ */
+export function formatPoints(value: string | number | null | undefined): string {
+  if (value === null || value === undefined || value === "") return "0";
+  const n = Number(value);
+  if (!Number.isFinite(n)) return "0";
+  return String(Number(n.toFixed(POINT_DECIMALS)));
 }
 
 /** Yes/No rule — section 4.3. Yes is 10, No is 0, no answer is 0. */
@@ -189,6 +228,7 @@ export function scoreEntry(
             value as number | null,
             challenge.unit as number,
             challenge.precision as number,
+            challenge.partialCredit ?? false,
           )
         : yesNoPoints(value as boolean | null);
     return {
@@ -215,11 +255,11 @@ export function scoreEntry(
     };
   });
 
-  const lifestyleEarned = challenges.reduce((sum, c) => sum + c.points, 0);
+  const lifestyleEarned = sumPoints(challenges.map((c) => c.points));
   const lifestyleMax = active.length * MAX_POINTS_PER_CHALLENGE;
-  const dietEarned = diet.reduce((sum, d) => sum + d.points, 0);
+  const dietEarned = sumPoints(diet.map((d) => d.points));
 
-  const dailyPoints = lifestyleEarned + dietEarned;
+  const dailyPoints = sumPoints([lifestyleEarned, dietEarned]);
   const maxPoints = lifestyleMax + DIET_MAX;
   const dailyPercentage =
     maxPoints === 0 ? 0 : round4((dailyPoints / maxPoints) * 100);

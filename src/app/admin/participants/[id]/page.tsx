@@ -26,7 +26,7 @@ import {
   getParticipantProfile,
   getWeeklyScores,
 } from "@/lib/queries";
-import { dailyMaxForWeek } from "@/lib/scoring";
+import { dailyMaxForWeek, formatPoints } from "@/lib/scoring";
 import { competitionClock, getSettings } from "@/lib/settings";
 
 import { ParticipantEditor } from "./editor";
@@ -224,7 +224,7 @@ export default async function ParticipantDetailPage({
                     />
                   </div>
                   <span className="tabular hidden w-20 shrink-0 text-right text-sm text-muted-foreground sm:block">
-                    {entry.dailyPoints}/{entry.maxPoints}
+                    {formatPoints(entry.dailyPoints)}/{entry.maxPoints}
                   </span>
                   <Button asChild size="sm" variant="outline" className="h-11">
                     <Link href={`/admin/entries/${entry.id}/edit`}>Correct</Link>

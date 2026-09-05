@@ -25,7 +25,7 @@ import {
   type IsoDate,
 } from "@/lib/dates";
 import { listEntriesForDate } from "@/lib/queries";
-import { dailyMaxForWeek } from "@/lib/scoring";
+import { dailyMaxForWeek, formatPoints } from "@/lib/scoring";
 import { competitionClock, getSettings } from "@/lib/settings";
 import { cn } from "@/lib/utils";
 
@@ -195,7 +195,7 @@ export default async function EntriesPage({
                       </TableCell>
                       <TableCell className="tabular hidden text-right lg:table-cell">
                         {row.entryId && row.status !== "missing"
-                          ? `${row.dailyPoints}/${row.maxPoints}`
+                          ? `${formatPoints(row.dailyPoints)}/${row.maxPoints}`
                           : "—"}
                       </TableCell>
                       <TableCell>

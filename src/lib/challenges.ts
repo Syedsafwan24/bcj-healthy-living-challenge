@@ -55,6 +55,13 @@ export interface ChallengeConfig {
   step?: number;
   /** Quantitative only: value that reaches the 10-point cap. */
   target?: number;
+  /**
+   * Quantitative only. When true the challenge awards a fraction of a point
+   * rather than rounding down: 6,900 steps earns 6.9, not 6. BCJ asked for
+   * this on steps alone (5 September 2026); water and sleep still score in
+   * whole points.
+   */
+  partialCredit?: boolean;
 }
 
 export const MAX_POINTS_PER_CHALLENGE = 10;
@@ -79,7 +86,8 @@ export const CHALLENGES: readonly ChallengeConfig[] = [
     ref: "C2",
     activatesWeek: 2,
     title: "Hit 8,000–10,000 steps daily",
-    hint: "1,000 steps earn 1 point, up to 10 points.",
+    hint: "1,000 steps earn 1 point, counted to the nearest tenth.",
+    partialCredit: true,
     kind: "quantitative",
     field: "steps",
     metric: "steps",
@@ -167,7 +175,7 @@ export const CHALLENGES: readonly ChallengeConfig[] = [
   },
 ] as const;
 
-/** Diet occasions — specification section 4.4. Two points each, ten in total. */
+/** Diet occasions — specification section 4.4. See DIET_OCCASIONS below. */
 export type DietField =
   | "breakfast"
   | "midMorning"

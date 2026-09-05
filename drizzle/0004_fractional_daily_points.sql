@@ -1,0 +1,1 @@
+ALTER TABLE "daily_entries" ALTER COLUMN "daily_points" SET DATA TYPE numeric(6, 2);

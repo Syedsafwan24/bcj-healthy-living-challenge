@@ -23,6 +23,7 @@ import {
   type ScoringSettings,
 } from "./scoring";
 import { addDays, isScorableDate, weekNoFor } from "./dates";
+import { CHALLENGES } from "./challenges";
 
 const SETTINGS: ScoringSettings = {
   startDate: "2026-09-07",
@@ -65,9 +66,10 @@ describe("section 4.8 test vectors", () => {
     expect(s.dailyPercentage).toBe(90.0);
   });
 
-  // Section 4.8 prints 23 / 30 (76.6667%) for diet 4 of 5. Under the two-meal
-  // rule the same day scores diet 5 rather than 8: 8 + 7 + 5 = 20.
-  it("T2 — week 2, water 2.0 L, steps 7,400, diet 1/2 → 20 / 30, 66.6667%", () => {
+  // Section 4.8 prints 23 / 30 (76.6667%) for diet 4 of 5 and whole-point
+  // steps. Two rule changes since: diet is 5 not 8, and steps award a
+  // fraction, so 7,400 is 7.4 not 7. 8 + 7.4 + 5 = 20.4.
+  it("T2 — week 2, water 2.0 L, steps 7,400, diet 1/2 → 20.4 / 30, 68.0000%", () => {
     const s = scoreEntry(
       SETTINGS,
       { waterLitres: 2.0, steps: 7400, ...HALF_DIET },
@@ -75,14 +77,15 @@ describe("section 4.8 test vectors", () => {
     );
     expect(s.activeChallenges).toBe(2);
     expect(s.dietEarned).toBe(5);
-    expect(s.dailyPoints).toBe(20);
+    expect(s.challenges[1].points).toBe(7.4);
+    expect(s.dailyPoints).toBe(20.4);
     expect(s.maxPoints).toBe(30);
-    expect(s.dailyPercentage).toBe(66.6667);
+    expect(s.dailyPercentage).toBe(68.0);
   });
 
-  // Section 4.8 prints 36 / 40 (90.0000%) for diet 4 of 5. Under the two-meal
-  // rule: 10 + 8 + 10 lifestyle, diet 5 → 33.
-  it("T3 — week 3, water 3.0 L, steps 8,200, C3 Yes, diet 1/2 → 33 / 40, 82.5000%", () => {
+  // Section 4.8 prints 36 / 40 (90.0000%). Now: water 10, steps 8.2 (not 8),
+  // C3 10, diet 5 → 33.2.
+  it("T3 — week 3, water 3.0 L, steps 8,200, C3 Yes, diet 1/2 → 33.2 / 40, 83.0000%", () => {
     const s = scoreEntry(
       SETTINGS,
       {
@@ -94,9 +97,9 @@ describe("section 4.8 test vectors", () => {
       dayInWeek(3),
     );
     expect(s.activeChallenges).toBe(3);
-    expect(s.dailyPoints).toBe(33);
+    expect(s.dailyPoints).toBe(33.2);
     expect(s.maxPoints).toBe(40);
-    expect(s.dailyPercentage).toBe(82.5);
+    expect(s.dailyPercentage).toBe(83.0);
   });
 
   it("T4 — week 7 mixed inputs → 67 / 80, 83.7500%", () => {
@@ -170,22 +173,26 @@ describe("section 4.8 test vectors", () => {
     expect(s.dailyPercentage).toBe(0.0);
   });
 
-  it("T8 — week 2, water 2.0 L, steps 999, diet 5/5 → 18 / 30, 60.0000%", () => {
+  // Section 4.8 prints 18 / 30: 999 steps fell short of the first whole point
+  // and scored 0. Steps now award a fraction, so 999 earns 0.99 — truncated,
+  // not rounded, so it never reads as the full point it did not reach.
+  it("T8 — week 2, water 2.0 L, steps 999, diet 2/2 → 18.99 / 30, 63.3000%", () => {
     const s = scoreEntry(
       SETTINGS,
       { waterLitres: 2.0, steps: 999, ...ALL_DIET },
       dayInWeek(2),
     );
-    expect(s.dailyPoints).toBe(18);
+    expect(s.challenges[1].points).toBe(0.99);
+    expect(s.dailyPoints).toBe(18.99);
     expect(s.maxPoints).toBe(30);
-    expect(s.dailyPercentage).toBe(60.0);
+    expect(s.dailyPercentage).toBe(63.3);
   });
 
-  // Section 4.8 prints 23 / 30; the two-meal rule makes the same day 20 / 30.
-  // What this vector is really guarding is the week, not the total.
-  it("T9 — a week 2 record scored while the competition is in week 7 → 20 / 30, 66.6667%", () => {
+  // Section 4.8 prints 23 / 30; the two-meal diet and fractional steps make
+  // the same day 20.4 / 30. What this vector guards is the week, not the total.
+  it("T9 — a week 2 record scored while the competition is in week 7 → 20.4 / 30, 68.0000%", () => {
     // The function is given only the entry's own date. If it read the clock
-    // instead, this would return 20 / 80 and the participant would be scored
+    // instead, this would return 20.4 / 80 and the participant would be scored
     // against seven challenges they had not yet been given.
     const entryDate = dayInWeek(2, 3);
     const s = scoreEntry(
@@ -195,9 +202,9 @@ describe("section 4.8 test vectors", () => {
     );
     expect(s.weekNo).toBe(2);
     expect(s.activeChallenges).toBe(2);
-    expect(s.dailyPoints).toBe(20);
+    expect(s.dailyPoints).toBe(20.4);
     expect(s.maxPoints).toBe(30);
-    expect(s.dailyPercentage).toBe(66.6667);
+    expect(s.dailyPercentage).toBe(68.0);
 
     // Scoring the same inputs again yields the same result, whatever the date
     // of the correction. The result is a function of (settings, inputs, date).
@@ -244,6 +251,48 @@ describe("section 4.3 — points per challenge", () => {
     expect(quantitativePoints(9.5, 0.25, 3)).toBe(10);
     expect(quantitativePoints(42000, 1000, 0)).toBe(10);
     expect(quantitativePoints(14, 1, 2)).toBe(10);
+  });
+
+  // BCJ asked for partial credit on steps alone (5 September 2026).
+  it("awards a fraction of a point when partial credit is on", () => {
+    expect(quantitativePoints(6900, 1000, 0, true)).toBe(6.9);
+    expect(quantitativePoints(8200, 1000, 0, true)).toBe(8.2);
+    expect(quantitativePoints(500, 1000, 0, true)).toBe(0.5);
+    expect(quantitativePoints(10, 1000, 0, true)).toBe(0.01);
+  });
+
+  it("truncates partial credit rather than rounding it up", () => {
+    // 6,999 steps is 6.999 of a point. Rounding would show 7, claiming a
+    // whole point the participant did not reach — the same reasoning as the
+    // floor rule above.
+    expect(quantitativePoints(6999, 1000, 0, true)).toBe(6.99);
+    expect(quantitativePoints(9995, 1000, 0, true)).toBe(9.99);
+    expect(quantitativePoints(5, 1000, 0, true)).toBe(0);
+  });
+
+  it("still caps partial credit at 10 points", () => {
+    expect(quantitativePoints(42000, 1000, 0, true)).toBe(10);
+    expect(quantitativePoints(10000, 1000, 0, true)).toBe(10);
+  });
+
+  it("leaves water and sleep on whole points", () => {
+    // Only C2 carries partialCredit, so the other two are unchanged.
+    const steps = CHALLENGES.find((c) => c.ref === "C2");
+    const water = CHALLENGES.find((c) => c.ref === "C1");
+    const sleep = CHALLENGES.find((c) => c.ref === "C7");
+    expect(steps?.partialCredit).toBe(true);
+    expect(water?.partialCredit).toBeUndefined();
+    expect(sleep?.partialCredit).toBeUndefined();
+  });
+
+  it("a day's total carries the fraction without float dust", () => {
+    const s = scoreEntry(
+      SETTINGS,
+      { waterLitres: 2.0, steps: 6900, ...ALL_DIET },
+      dayInWeek(2),
+    );
+    // 8 water + 6.9 steps + 10 diet, not 24.900000000000002.
+    expect(s.dailyPoints).toBe(24.9);
   });
 
   it("scores a missing or negative value as 0", () => {

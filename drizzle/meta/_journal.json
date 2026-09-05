@@ -29,6 +29,13 @@
       "when": 1788445268512,
       "tag": "0003_make_optional_fields_nullable",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1788600783924,
+      "tag": "0004_fractional_daily_points",
+      "breakpoints": true
     }
   ]
 }

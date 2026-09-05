@@ -106,7 +106,7 @@ export async function saveEntry(
         lunch: write.lunch ?? null,
         eveningSnack: write.eveningSnack ?? null,
         dinner: write.dinner ?? null,
-        dailyPoints: score.dailyPoints,
+        dailyPoints: String(score.dailyPoints),
         maxPoints: score.maxPoints,
         dailyPercentage: String(score.dailyPercentage),
         status,
@@ -134,7 +134,7 @@ export async function saveEntry(
           // answers a participant gave before the rule changed, the first
           // time anyone corrected one of those days. They score nothing
           // either way; an edit simply leaves them as they were.
-          dailyPoints: score.dailyPoints,
+          dailyPoints: String(score.dailyPoints),
           maxPoints: score.maxPoints,
           dailyPercentage: String(score.dailyPercentage),
           status,
@@ -328,7 +328,7 @@ export async function recomputeParticipant(
         .update(dailyEntries)
         .set({
           weekNo: score.weekNo,
-          dailyPoints: score.dailyPoints,
+          dailyPoints: String(score.dailyPoints),
           maxPoints: score.maxPoints,
           dailyPercentage: String(score.dailyPercentage),
           computedAt: new Date(),

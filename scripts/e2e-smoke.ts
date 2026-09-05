@@ -246,7 +246,9 @@ async function main() {
 
   check(
     "the server stores the score it calculated itself",
-    entry?.dailyPoints === 98 && entry?.maxPoints === 100 && Number(entry?.dailyPercentage) === 98,
+    Number(entry?.dailyPoints) === 98 &&
+      entry?.maxPoints === 100 &&
+      Number(entry?.dailyPercentage) === 98,
     `${entry?.dailyPoints}/${entry?.maxPoints} = ${entry?.dailyPercentage}%`,
   );
   // Derived from the settings, not hardcoded: the competition moves on, and
@@ -318,7 +320,7 @@ async function main() {
 
   check(
     "an admin correction rescores the day",
-    corrected?.dailyPoints === 92 && corrected?.maxPoints === 100,
+    Number(corrected?.dailyPoints) === 92 && corrected?.maxPoints === 100,
     `${corrected?.dailyPoints}/${corrected?.maxPoints}`,
   );
   check(

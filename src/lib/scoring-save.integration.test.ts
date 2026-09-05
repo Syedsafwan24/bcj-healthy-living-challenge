@@ -97,13 +97,14 @@ suite("scoring-save against the database", () => {
     });
 
     expect(saved.weekNo).toBe(2);
-    expect(saved.dailyPoints).toBe(20);
+    // Steps 7,400 earns 7.4, not 7 — partial credit, steps only.
+    expect(saved.dailyPoints).toBe(20.4);
     expect(saved.maxPoints).toBe(30);
-    expect(saved.dailyPercentage).toBe(66.6667);
+    expect(saved.dailyPercentage).toBe(68.0);
 
-    // One day of 66.6667 across a seven-day week.
-    expect(saved.weekPercentage).toBe(9.5238);
-    expect(saved.finalScore).toBe(9.5238);
+    // One day of 68.0 across a seven-day week.
+    expect(saved.weekPercentage).toBe(9.7143);
+    expect(saved.finalScore).toBe(9.7143);
 
     // The three calculated columns are on the row, and no endpoint wrote them.
     const [stored] = await db
@@ -117,9 +118,10 @@ suite("scoring-save against the database", () => {
       );
 
     expect(stored.weekNo).toBe(2);
-    expect(stored.dailyPoints).toBe(20);
+    // Stored as numeric, so it comes back a fixed-scale string.
+    expect(Number(stored.dailyPoints)).toBe(20.4);
     expect(stored.maxPoints).toBe(30);
-    expect(Number(stored.dailyPercentage)).toBe(66.6667);
+    expect(Number(stored.dailyPercentage)).toBe(68.0);
     expect(stored.status).toBe("submitted");
   });
 
@@ -152,7 +154,7 @@ suite("scoring-save against the database", () => {
       );
 
     expect(rows).toHaveLength(1);
-    expect(rows[0].dailyPoints).toBe(30); // 10 + 10 + 10 diet
+    expect(Number(rows[0].dailyPoints)).toBe(30); // 10 + 10 + 10 diet
 
     // A direct insert bypassing ON CONFLICT is refused by the constraint.
     await expect(
@@ -224,8 +226,8 @@ suite("scoring-save against the database", () => {
 
     expect(saved.weekNo).toBe(2);
     expect(saved.maxPoints).toBe(30);
-    expect(saved.dailyPoints).toBe(20);
-    expect(saved.dailyPercentage).toBe(66.6667);
+    expect(saved.dailyPoints).toBe(20.4);
+    expect(saved.dailyPercentage).toBe(68.0);
   });
 
   it("recomputing a participant leaves every stored score unchanged", async () => {

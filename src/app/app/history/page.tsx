@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { requireParticipant } from "@/lib/auth/guards";
 import { formatIsoDate, type IsoDate } from "@/lib/dates";
 import { getWeeklyScores, getWeekGrid } from "@/lib/queries";
-import { dailyMaxForWeek } from "@/lib/scoring";
+import { dailyMaxForWeek, formatPoints } from "@/lib/scoring";
 import {
   competitionClock,
   getSettings,
@@ -165,7 +165,7 @@ export default async function HistoryPage({
                 )}
                 {entry && entry.status !== "missing" && (
                   <span className="tabular text-sm text-muted-foreground">
-                    {entry.dailyPoints}/{entry.maxPoints}
+                    {formatPoints(entry.dailyPoints)}/{entry.maxPoints}
                   </span>
                 )}
                 {entry?.status === "locked" ? (

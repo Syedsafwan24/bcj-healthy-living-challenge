@@ -195,7 +195,7 @@ async function main() {
         lunch: inputs.lunch,
         eveningSnack: inputs.eveningSnack,
         dinner: inputs.dinner,
-        dailyPoints: score.dailyPoints,
+        dailyPoints: String(score.dailyPoints),
         maxPoints: score.maxPoints,
         dailyPercentage: String(score.dailyPercentage),
         status: "submitted",

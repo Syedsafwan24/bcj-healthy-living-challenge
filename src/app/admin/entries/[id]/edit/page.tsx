@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { requireAdmin } from "@/lib/auth/guards";
 import { formatIsoDateLong, weekNoFor, type IsoDate } from "@/lib/dates";
 import { getEntryById } from "@/lib/queries";
-import { activeChallengesForWeek } from "@/lib/scoring";
+import { activeChallengesForWeek, formatPoints } from "@/lib/scoring";
 import { getSettings, toScoringSettings } from "@/lib/settings";
 
 export const metadata: Metadata = { title: "Correct an entry" };
@@ -77,7 +77,7 @@ export default async function EditEntryPage({
           <RegistrationId value={participant.registrationId} size="sm" />
           <EntryStatusBadge status={entry.status} />
           <span className="tabular text-sm text-muted-foreground">
-            Currently {entry.dailyPoints ?? 0}/{entry.maxPoints ?? 0} ·{" "}
+            Currently {formatPoints(entry.dailyPoints)}/{entry.maxPoints ?? 0} ·{" "}
             {Number(entry.dailyPercentage ?? 0).toFixed(4)}%
           </span>
         </div>
