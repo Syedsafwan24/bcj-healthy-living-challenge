@@ -19,9 +19,9 @@ export const dynamic = "force-dynamic";
  *
  * Split in two on purpose. The card below holds what the organisers own: the
  * registration ID they sign in with, the name published on the leaderboard,
- * and the diet category and gender that decide which division a prize is
- * awarded in. The form beneath holds what describes the person, which they
- * can correct themselves.
+ * and the gender that decides which division a prize is awarded in. The form
+ * beneath holds what describes the person, which they can correct
+ * themselves.
  */
 export default async function ProfilePage() {
   const session = await requireParticipant();
@@ -33,12 +33,13 @@ export default async function ProfilePage() {
   // Held by the organisers. Each one either identifies the participant, is
   // published, or decides the division a prize is judged in. Full name
   // doubles as the display name everywhere that column is read, so it is
-  // listed once.
+  // listed once. The diet category is not here: it no longer affects a
+  // score or a division, so it is the nutrition team's record, not the
+  // participant's.
   const rows: Array<[string, React.ReactNode]> = [
     ["Full name", profile.fullName],
     ["Email", profile.email],
     ["Gender", profile.gender === "male" ? "Male" : "Female"],
-    ["Diet category", profile.dietTitle ?? "Not assigned yet"],
     [
       "Registered",
       formatDateTime(profile.registeredAt, settings.timezone),

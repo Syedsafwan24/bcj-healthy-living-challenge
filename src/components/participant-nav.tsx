@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation";
 import {
   CalendarDays,
   LogOut,
-  Salad,
   TrendingUp,
   Trophy,
   User,
@@ -39,7 +38,6 @@ const LINKS = [
   ...(PARTICIPANT_LEADERBOARD_VISIBLE
     ? [{ href: "/app/leaderboard", label: "Leaderboard", icon: Trophy }]
     : []),
-  { href: "/app/plan", label: "My plan", icon: Salad },
   // Not just a read-only card any more: participants correct their own
   // contact details here, so it needs to be findable without opening a menu.
   { href: "/app/profile", label: "My details", icon: User },

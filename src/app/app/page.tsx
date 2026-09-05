@@ -145,11 +145,6 @@ export default async function TodayPage({
           <Badge variant="secondary" className="rounded-full">
             Week {weekNo} of {settings.totalWeeks}
           </Badge>
-          {profile?.dietTitle && (
-            <Badge variant="outline" className="rounded-full">
-              {profile.dietTitle}
-            </Badge>
-          )}
           {!isToday && (
             <Badge variant="outline" className="rounded-full">
               Earlier day
