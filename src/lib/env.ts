@@ -87,6 +87,24 @@ export const env = {
   get emailFrom() {
     return process.env.EMAIL_FROM ?? "BCJ Healthy Living <no-reply@bcjed.com>";
   },
+  /* ---- web push ---- */
+  get vapidPublicKey() {
+    return process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? "";
+  },
+  get vapidPrivateKey() {
+    return process.env.VAPID_PRIVATE_KEY ?? "";
+  },
+  get vapidSubject() {
+    return process.env.VAPID_SUBJECT ?? "mailto:no-reply@bcjed.com";
+  },
+  /**
+   * Notifications are offered only when a key pair is configured. Without
+   * one the browser cannot subscribe at all, so the app hides the option
+   * rather than showing a switch that silently fails.
+   */
+  get pushConfigured() {
+    return Boolean(this.vapidPublicKey && this.vapidPrivateKey);
+  },
   get cronSecret() {
     return required("CRON_SECRET");
   },

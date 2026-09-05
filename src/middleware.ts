@@ -53,6 +53,10 @@ function contentSecurityPolicy(nonce: string): string {
     "img-src 'self' data: blob:",
     "font-src 'self' data:",
     "connect-src 'self'",
+    // Stated outright rather than left to fall back: worker-src falls through
+    // child-src to script-src in some browsers, and 'strict-dynamic' there
+    // makes 'self' ignored, which would block the push service worker.
+    "worker-src 'self'",
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",

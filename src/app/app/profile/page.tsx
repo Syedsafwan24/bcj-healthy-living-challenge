@@ -6,10 +6,12 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ProfileForm } from "./profile-form";
+import { PushToggle } from "./push-toggle";
 import { requireParticipant } from "@/lib/auth/guards";
 import { formatDateTime } from "@/lib/dates";
 import { getParticipantProfile } from "@/lib/queries";
 import { getSettings } from "@/lib/settings";
+import { env } from "@/lib/env";
 
 export const metadata: Metadata = { title: "My details", robots: { index: false } };
 export const dynamic = "force-dynamic";
@@ -111,6 +113,22 @@ export default async function ProfilePage() {
           />
         </CardContent>
       </Card>
+
+      {env.pushConfigured && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Reminders</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              A nudge in the evening if the day is still empty. Email is set
+              above; this switch is for notifications on the device you are
+              reading this on.
+            </p>
+          </CardHeader>
+          <CardContent>
+            <PushToggle publicKey={env.vapidPublicKey} />
+          </CardContent>
+        </Card>
+      )}
 
       <Alert>
         <ShieldCheck className="size-4" />

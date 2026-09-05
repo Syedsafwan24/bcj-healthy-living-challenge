@@ -387,6 +387,37 @@ export const auditLog = pgTable(
 /* ------------------------------------------------------------------ */
 
 /**
+ * Browser push subscriptions — one row per device a participant has allowed
+ * notifications on.
+ *
+ * A person may have several: a phone and a laptop are separate subscriptions
+ * with separate endpoints. The endpoint is unique because the browser will
+ * hand back the same one for the same device, so re-subscribing must update
+ * rather than duplicate.
+ *
+ * Rows are deleted when the push service reports the subscription is gone —
+ * a 404 or 410 means the browser has dropped it and it will never work again.
+ */
+export const pushSubscriptions = pgTable(
+  "push_subscriptions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    participantId: uuid("participant_id")
+      .notNull()
+      .references(() => participants.id, { onDelete: "cascade" }),
+    endpoint: text("endpoint").notNull().unique(),
+    /** The two keys the browser issues for encrypting a payload to it. */
+    p256dh: text("p256dh").notNull(),
+    auth: text("auth").notNull(),
+    userAgent: text("user_agent"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("push_subscriptions_participant_idx").on(t.participantId)],
+);
+
+/**
  * Sign-in attempt counters, section 2.2 and 2.3: five attempts per IP per
  * minute. Kept in the database rather than in memory so the limit holds
  * across serverless instances.

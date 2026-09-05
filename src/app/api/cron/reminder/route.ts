@@ -5,6 +5,7 @@ import { db } from "@/db";
 import { dailyEntries, participants } from "@/db/schema";
 import { sendDailyReminder } from "@/lib/email";
 import { env } from "@/lib/env";
+import { sendPushToParticipants } from "@/lib/push";
 import { getMissedDays } from "@/lib/queries";
 import { competitionClock, getSettings } from "@/lib/settings";
 
@@ -30,8 +31,13 @@ interface ReminderResult {
   today: string;
   weekNo: number | null;
   candidates: number;
+  /** Emails. */
   sent: number;
   failed: number;
+  /** Browser notifications, counted per device rather than per person. */
+  pushed: number;
+  pushFailed: number;
+  pushRemoved: number;
   message?: string;
 }
 
@@ -51,30 +57,27 @@ async function runReminder(): Promise<ReminderResult> {
     candidates: 0,
     sent: 0,
     failed: 0,
+    pushed: 0,
+    pushFailed: 0,
+    pushRemoved: 0,
   };
 
   if (!clock.started || clock.finished) {
     return { ...base, message: "The challenge is not running." };
   }
 
-  if (!env.smtpConfigured) {
-    return { ...base, message: "SMTP is not configured, so nothing was sent." };
-  }
-
-  // Everyone still competing who wants to hear from us.
+  // Everyone still competing. The email opt-out is applied further down
+  // rather than here: it governs email only, and somebody who turned email
+  // off but allowed notifications should still get the notification.
   const people = await db
     .select({
       id: participants.id,
       email: participants.email,
       fullName: participants.fullName,
+      reminderEmails: participants.reminderEmails,
     })
     .from(participants)
-    .where(
-      and(
-        eq(participants.status, "active"),
-        eq(participants.reminderEmails, true),
-      ),
-    );
+    .where(eq(participants.status, "active"));
 
   if (people.length === 0) {
     return { ...base, ran: true, message: "Nobody to remind." };
@@ -101,23 +104,44 @@ async function runReminder(): Promise<ReminderResult> {
   const outstanding = people.filter((p) => !done.has(p.id));
   base.candidates = outstanding.length;
 
-  for (const person of outstanding) {
-    try {
-      const missed = await getMissedDays(settings, person.id, clock.today);
-      const delivery = await sendDailyReminder({
-        to: person.email,
-        firstName: person.fullName.trim().split(/\s+/)[0] || "there",
-        weekNo: clock.currentWeek ?? 1,
-        emptyDays: missed.count,
-      });
-      if (delivery.sent) base.sent += 1;
-      else base.failed += 1;
-    } catch (error) {
-      // One bad address must not stop the rest of the roster being reminded.
-      base.failed += 1;
-      console.error("[cron] reminder failed for one participant", error);
+  if (env.smtpConfigured) {
+    for (const person of outstanding.filter((p) => p.reminderEmails)) {
+      try {
+        const missed = await getMissedDays(settings, person.id, clock.today);
+        const delivery = await sendDailyReminder({
+          to: person.email,
+          firstName: person.fullName.trim().split(/\s+/)[0] || "there",
+          weekNo: clock.currentWeek ?? 1,
+          emptyDays: missed.count,
+        });
+        if (delivery.sent) base.sent += 1;
+        else base.failed += 1;
+      } catch (error) {
+        // One bad address must not stop the rest of the roster being reminded.
+        base.failed += 1;
+        console.error("[cron] reminder failed for one participant", error);
+      }
     }
+  } else {
+    base.message = "SMTP is not configured, so no email was sent.";
   }
+
+  // The same nudge to any device that has allowed notifications. It goes to
+  // everyone outstanding, including those who turned email off: the two are
+  // separate choices, and somebody who wants only the notification should get
+  // only the notification. It carries no score, because a notification is
+  // readable on a locked screen.
+  const push = await sendPushToParticipants(
+    outstanding.map((p) => p.id),
+    {
+      title: "Fill in today",
+      body: `Week ${clock.currentWeek ?? 1} — your day is still empty. It takes under a minute.`,
+      url: "/app",
+    },
+  );
+  base.pushed = push.sent;
+  base.pushFailed = push.failed;
+  base.pushRemoved = push.removed;
 
   base.ran = true;
   return base;

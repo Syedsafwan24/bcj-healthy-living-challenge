@@ -50,6 +50,13 @@
       "when": 1788612523348,
       "tag": "0006_reminder_emails",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1788612857918,
+      "tag": "0007_push_subscriptions",
+      "breakpoints": true
     }
   ]
 }
