@@ -43,6 +43,13 @@
       "when": 1788603333042,
       "tag": "0005_vegetables_per_meal",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1788612523348,
+      "tag": "0006_reminder_emails",
+      "breakpoints": true
     }
   ]
 }

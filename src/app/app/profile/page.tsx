@@ -106,6 +106,7 @@ export default async function ProfilePage() {
               mobile: profile.mobile,
               age: profile.age,
               weightKg: profile.weightKg,
+              reminderEmails: profile.reminderEmails,
             }}
           />
         </CardContent>

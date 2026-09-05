@@ -174,6 +174,13 @@ export const participants = pgTable(
       () => dietCategories.id,
     ),
     status: text("status").notNull().default("pending"),
+    /**
+     * Daily reminder emails. On by default — somebody registering for a
+     * 12-week daily challenge is asking to be reminded — and turned off by
+     * the participant on /app/profile. 84 nightly emails with no way out is
+     * how a sending domain gets marked as spam.
+     */
+    reminderEmails: boolean("reminder_emails").notNull().default(true),
     registeredAt: timestamp("registered_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

@@ -1,0 +1,1 @@
+ALTER TABLE "participants" ADD COLUMN "reminder_emails" boolean DEFAULT true NOT NULL;

@@ -35,6 +35,7 @@ export function ProfileForm({
     mobile: string;
     age: number | null;
     weightKg: string | null;
+    reminderEmails: boolean;
   };
 }) {
   const [state, action] = useActionState<ProfileActionState | null, FormData>(
@@ -104,6 +105,22 @@ export function ProfileForm({
           />
         </Field>
       </div>
+
+      <label className="flex items-start gap-3 rounded-xl border bg-card p-4">
+        <input
+          type="checkbox"
+          name="reminderEmails"
+          defaultChecked={profile.reminderEmails}
+          className="mt-0.5 size-5 shrink-0 accent-primary"
+        />
+        <span className="text-sm">
+          <span className="font-medium">Remind me by email</span>
+          <span className="mt-0.5 block text-muted-foreground">
+            One message in the evening, only on days you have not filled in
+            yet.
+          </span>
+        </span>
+      </label>
 
       <div className="flex justify-end">
         <SaveButton />

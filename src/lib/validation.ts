@@ -321,6 +321,11 @@ export const participantSelfUpdateSchema = z.object({
     .max(300, "Enter weight in kilograms")
     .optional()
     .nullable(),
+  // An unchecked checkbox submits nothing at all, so a missing value means
+  // off. Anything else would make the box impossible to untick.
+  reminderEmails: z
+    .union([z.boolean(), z.string(), z.undefined()])
+    .transform((v) => v === true || v === "true" || v === "on"),
 });
 
 export type ParticipantSelfUpdateValues = z.output<

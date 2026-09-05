@@ -362,6 +362,61 @@ export async function sendAdminInvite(params: {
  * written to the audit log (specification sections 2.3 and 11); putting them
  * in an email would route them around that.
  */
+/**
+ * The evening nudge — one message a day to a participant who has not filled
+ * in today, sent a few hours before the cutoff.
+ *
+ * Only ever sent to somebody who has not recorded the day, so a participant
+ * who keeps up never hears from it. It carries no score and no health
+ * information: a reminder that sits unread in an inbox should not be a
+ * disclosure (specification section 11).
+ *
+ * Every one says how to stop them. A daily email for twelve weeks with no
+ * way out is how a sending domain ends up in spam folders, and the switch
+ * lives on a screen the participant already signs into.
+ */
+export async function sendDailyReminder(params: {
+  to: string;
+  firstName: string;
+  weekNo: number;
+  emptyDays: number;
+}) {
+  const url = `${env.appUrl}/app`;
+  const settingsUrl = `${env.appUrl}/app/profile`;
+
+  const behind =
+    params.emptyDays > 0
+      ? `You also have ${params.emptyDays} earlier day${
+          params.emptyDays === 1 ? "" : "s"
+        } still empty. You can fill in any day until the challenge ends.`
+      : "";
+
+  return send({
+    to: params.to,
+    subject: `Fill in today — BCJ Healthy Living, week ${params.weekNo}`,
+    text: [
+      `As-salamu alaykum ${params.firstName},`,
+      "",
+      `You have not filled in today yet. It takes under a minute.`,
+      url,
+      ...(behind ? ["", behind] : []),
+      "",
+      `To stop these reminders, open ${settingsUrl} and turn them off.`,
+    ].join("\n"),
+    html: layout(
+      `As-salamu alaykum ${escapeHtml(params.firstName)}`,
+      `<p style="margin:0 0 20px;font-size:15px;line-height:1.6">You have not filled in today yet — week ${params.weekNo} of the challenge. It takes under a minute.</p>
+       <p style="margin:0 0 20px"><a href="${url}" style="background:${ACCENT};color:#ffffff;text-decoration:none;padding:12px 20px;border-radius:10px;display:inline-block;font-weight:600">Fill in today</a></p>
+       ${
+         behind
+           ? `<p style="margin:0 0 20px;font-size:15px;line-height:1.6">${escapeHtml(behind)}</p>`
+           : ""
+       }
+       <p style="margin:0;font-size:13px;color:#4E5C56">Would rather not get these? <a href="${settingsUrl}" style="color:${ACCENT}">Turn reminders off</a> in My details.</p>`,
+    ),
+  });
+}
+
 export async function sendNewRegistrationAlert(params: {
   to: string[];
   fullName: string;
