@@ -110,7 +110,10 @@ describe("section 4.8 test vectors", () => {
         steps: 10500,
         c3CookAtHome: true,
         c4NoSugary: true,
+        // C5 is answered per meal now; "achieved" means both halves, which
+        // keeps this vector at the 10 points section 4.8 gave it.
         c5Vegetables: true,
+        c5VegetablesDinner: true,
         c6NoLateFood: false,
         sleepHours: 7.5,
         ...ALL_DIET,
@@ -132,6 +135,7 @@ describe("section 4.8 test vectors", () => {
         c3CookAtHome: true,
         c4NoSugary: true,
         c5Vegetables: true,
+        c5VegetablesDinner: true,
         c6NoLateFood: true,
         sleepHours: 10,
         c8Mindfulness: true,
@@ -311,6 +315,53 @@ describe("section 4.3 — points per challenge", () => {
     expect(explicitNo.dailyPoints).toBe(untouched.dailyPoints);
     expect(explicitNo.challenges[2].answered).toBe(true);
     expect(untouched.challenges[2].answered).toBe(false);
+  });
+});
+
+describe("C5 — vegetables, answered per meal", () => {
+  // BCJ split C5 across the two main meals on 5 September 2026: lunch and
+  // dinner are answered separately and score half each.
+  const week5 = () => dayInWeek(5);
+
+  function c5(inputs: EntryInputs) {
+    return scoreEntry(SETTINGS, inputs, week5()).challenges.find(
+      (c) => c.ref === "C5",
+    )!;
+  }
+
+  it("scores 5 for lunch alone", () => {
+    expect(c5({ c5Vegetables: true }).points).toBe(5);
+  });
+
+  it("scores 5 for dinner alone", () => {
+    expect(c5({ c5VegetablesDinner: true }).points).toBe(5);
+  });
+
+  it("scores the full 10 for both", () => {
+    expect(c5({ c5Vegetables: true, c5VegetablesDinner: true }).points).toBe(10);
+  });
+
+  it("scores 0 for neither, and counts as answered", () => {
+    // "None" is a real answer worth nothing, which is not the same as never
+    // having answered — the screen shows the two differently.
+    const none = c5({ c5Vegetables: false, c5VegetablesDinner: false });
+    expect(none.points).toBe(0);
+    expect(none.answered).toBe(true);
+  });
+
+  it("is unanswered until one half is touched", () => {
+    expect(c5({}).answered).toBe(false);
+    expect(c5({ c5VegetablesDinner: false }).answered).toBe(true);
+  });
+
+  it("still tops out at the same 10 points the single question was worth", () => {
+    const s = scoreEntry(
+      SETTINGS,
+      { c5Vegetables: true, c5VegetablesDinner: true },
+      week5(),
+    );
+    expect(s.challenges.find((c) => c.ref === "C5")!.max).toBe(10);
+    expect(s.maxPoints).toBe(60);
   });
 });
 

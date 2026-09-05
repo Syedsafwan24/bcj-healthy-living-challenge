@@ -232,6 +232,7 @@ export const dailyEntrySchema = z.object({
   c3CookAtHome: triState,
   c4NoSugary: triState,
   c5Vegetables: triState,
+  c5VegetablesDinner: triState,
   c6NoLateFood: triState,
   c8Mindfulness: triState,
   c9ScreenTime: triState,

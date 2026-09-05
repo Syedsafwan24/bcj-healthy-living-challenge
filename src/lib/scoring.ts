@@ -14,6 +14,7 @@ import {
   DIET_OCCASIONS,
   MAX_POINTS_PER_CHALLENGE,
   POINTS_PER_DIET_OCCASION,
+  POINTS_PER_MEAL_HALF,
   type ChallengeConfig,
   type ChallengeRef,
   type DietField,
@@ -41,6 +42,7 @@ export interface EntryInputs {
   c3CookAtHome?: boolean | null;
   c4NoSugary?: boolean | null;
   c5Vegetables?: boolean | null;
+  c5VegetablesDinner?: boolean | null;
   c6NoLateFood?: boolean | null;
   c8Mindfulness?: boolean | null;
   c9ScreenTime?: boolean | null;
@@ -222,6 +224,13 @@ export function scoreEntry(
 
   const challenges: ChallengeScore[] = active.map((challenge) => {
     const value = readValue(inputs, challenge);
+    // A meal pair is two yes/no answers worth half each: vegetables with
+    // lunch, with dinner, or neither. Neither is 0, both is the full 10.
+    const second =
+      challenge.kind === "mealPair" && challenge.secondField
+        ? (inputs[challenge.secondField] ?? null)
+        : null;
+
     const points =
       challenge.kind === "quantitative"
         ? quantitativePoints(
@@ -230,14 +239,20 @@ export function scoreEntry(
             challenge.precision as number,
             challenge.partialCredit ?? false,
           )
-        : yesNoPoints(value as boolean | null);
+        : challenge.kind === "mealPair"
+          ? (value === true ? POINTS_PER_MEAL_HALF : 0) +
+            (second === true ? POINTS_PER_MEAL_HALF : 0)
+          : yesNoPoints(value as boolean | null);
     return {
       ref: challenge.ref,
       title: challenge.title,
       points,
       max: MAX_POINTS_PER_CHALLENGE,
       value,
-      answered: value !== null,
+      answered:
+        challenge.kind === "mealPair"
+          ? value !== null || second !== null
+          : value !== null,
     };
   });
 

@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { correctEntry, type CorrectionState } from "@/app/admin/entries/actions";
 import {
+  MealPairRow,
   QuantitativeRow,
   YesNoButtons,
   YesNoRow,
@@ -37,6 +38,7 @@ export interface CorrectionValues {
   c3CookAtHome: TriState;
   c4NoSugary: TriState;
   c5Vegetables: TriState;
+  c5VegetablesDinner: TriState;
   c6NoLateFood: TriState;
   c8Mindfulness: TriState;
   c9ScreenTime: TriState;
@@ -57,6 +59,7 @@ function toInputs(values: CorrectionValues): EntryInputs {
     c3CookAtHome: tri(values.c3CookAtHome),
     c4NoSugary: tri(values.c4NoSugary),
     c5Vegetables: tri(values.c5Vegetables),
+    c5VegetablesDinner: tri(values.c5VegetablesDinner),
     c6NoLateFood: tri(values.c6NoLateFood),
     c8Mindfulness: tri(values.c8Mindfulness),
     c9ScreenTime: tri(values.c9ScreenTime),
@@ -74,6 +77,7 @@ const REF_BY_FIELD: Record<string, string> = {
   c3CookAtHome: "C3",
   c4NoSugary: "C4",
   c5Vegetables: "C5",
+  c5VegetablesDinner: "C5",
   c6NoLateFood: "C6",
   sleepHours: "C7",
   c8Mindfulness: "C8",
@@ -184,6 +188,33 @@ export function CorrectionForm({
                 onChange={(next) =>
                   set(challenge.field as keyof CorrectionValues, next as never)
                 }
+              />
+            ) : challenge.kind === "mealPair" && challenge.secondField ? (
+              <MealPairRow
+                key={challenge.ref}
+                challenge={challenge}
+                first={values[challenge.field as keyof CorrectionValues] as TriState}
+                second={
+                  values[challenge.secondField as keyof CorrectionValues] as TriState
+                }
+                points={pointsFor(challenge.field)}
+                onChange={(which) => {
+                  const secondField =
+                    challenge.secondField as keyof CorrectionValues;
+                  // "None" is an explicit no to both — the answer that scores
+                  // zero, as distinct from never having answered.
+                  if (which === "none") {
+                    set(challenge.field as keyof CorrectionValues, "no" as never);
+                    set(secondField, "no" as never);
+                    return;
+                  }
+                  const key =
+                    which === "first"
+                      ? (challenge.field as keyof CorrectionValues)
+                      : secondField;
+                  const current = values[key] as TriState;
+                  set(key, (current === "yes" ? "no" : "yes") as never);
+                }}
               />
             ) : (
               <YesNoRow

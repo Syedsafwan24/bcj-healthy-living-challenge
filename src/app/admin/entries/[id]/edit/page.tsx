@@ -46,6 +46,7 @@ export default async function EditEntryPage({
     c3CookAtHome: tri(entry.c3CookAtHome),
     c4NoSugary: tri(entry.c4NoSugary),
     c5Vegetables: tri(entry.c5Vegetables),
+    c5VegetablesDinner: tri(entry.c5VegetablesDinner),
     c6NoLateFood: tri(entry.c6NoLateFood),
     c8Mindfulness: tri(entry.c8Mindfulness),
     c9ScreenTime: tri(entry.c9ScreenTime),

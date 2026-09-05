@@ -28,6 +28,7 @@ const EMPTY: CorrectionValues = {
   c3CookAtHome: "",
   c4NoSugary: "",
   c5Vegetables: "",
+  c5VegetablesDinner: "",
   c6NoLateFood: "",
   c8Mindfulness: "",
   c9ScreenTime: "",

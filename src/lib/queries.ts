@@ -51,6 +51,7 @@ export function entryToInputs(entry: DailyEntry): EntryInputs {
     c3CookAtHome: entry.c3CookAtHome,
     c4NoSugary: entry.c4NoSugary,
     c5Vegetables: entry.c5Vegetables,
+    c5VegetablesDinner: entry.c5VegetablesDinner,
     c6NoLateFood: entry.c6NoLateFood,
     c8Mindfulness: entry.c8Mindfulness,
     c9ScreenTime: entry.c9ScreenTime,

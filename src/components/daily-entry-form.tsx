@@ -7,6 +7,7 @@ import { CheckCircle2, Lock, Utensils } from "lucide-react";
 import { toast } from "sonner";
 
 import {
+  MealPairRow,
   QuantitativeRow,
   YesNoButtons,
   YesNoRow,
@@ -49,6 +50,7 @@ export interface DailyFormValues {
   c3CookAtHome: TriState;
   c4NoSugary: TriState;
   c5Vegetables: TriState;
+  c5VegetablesDinner: TriState;
   c6NoLateFood: TriState;
   c8Mindfulness: TriState;
   c9ScreenTime: TriState;
@@ -66,6 +68,7 @@ export const EMPTY_FORM: DailyFormValues = {
   c3CookAtHome: "",
   c4NoSugary: "",
   c5Vegetables: "",
+  c5VegetablesDinner: "",
   c6NoLateFood: "",
   c8Mindfulness: "",
   c9ScreenTime: "",
@@ -86,6 +89,7 @@ function toInputs(values: DailyFormValues): EntryInputs {
     c3CookAtHome: tri(values.c3CookAtHome),
     c4NoSugary: tri(values.c4NoSugary),
     c5Vegetables: tri(values.c5Vegetables),
+    c5VegetablesDinner: tri(values.c5VegetablesDinner),
     c6NoLateFood: tri(values.c6NoLateFood),
     c8Mindfulness: tri(values.c8Mindfulness),
     c9ScreenTime: tri(values.c9ScreenTime),
@@ -203,6 +207,36 @@ export function DailyEntryForm({
         />
       );
     }
+    if (challenge.kind === "mealPair" && challenge.secondField) {
+      const secondField = challenge.secondField as keyof DailyFormValues;
+      return (
+        <MealPairRow
+          key={challenge.ref}
+          challenge={challenge}
+          first={values[challenge.field as keyof DailyFormValues] as TriState}
+          second={values[secondField] as TriState}
+          points={pointsFor(challenge.field)}
+          onChange={(which) => {
+            // "None" is an explicit no to both, which is what scores zero;
+            // leaving them untouched would read as unanswered instead.
+            if (which === "none") {
+              set(challenge.field as keyof DailyFormValues, "no" as never);
+              set(secondField, "no" as never);
+              return;
+            }
+            const key =
+              which === "first"
+                ? (challenge.field as keyof DailyFormValues)
+                : secondField;
+            const current = values[key] as TriState;
+            set(key, (current === "yes" ? "no" : "yes") as never);
+          }}
+        disabled={readOnly}
+          isNew={isNew}
+        />
+      );
+    }
+
     return (
       <YesNoRow
         key={challenge.ref}
@@ -412,6 +446,7 @@ function refFor(field: string): string {
     case "c4NoSugary":
       return "C4";
     case "c5Vegetables":
+    case "c5VegetablesDinner":
       return "C5";
     case "c6NoLateFood":
       return "C6";

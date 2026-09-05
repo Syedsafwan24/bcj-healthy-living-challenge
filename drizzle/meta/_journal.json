@@ -36,6 +36,13 @@
       "when": 1788600783924,
       "tag": "0004_fractional_daily_points",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1788603333042,
+      "tag": "0005_vegetables_per_meal",
+      "breakpoints": true
     }
   ]
 }

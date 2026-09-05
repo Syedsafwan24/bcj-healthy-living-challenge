@@ -117,6 +117,82 @@ export function QuantitativeRow({
   );
 }
 
+/**
+ * A challenge answered per meal: vegetables with lunch, with dinner, or
+ * neither.
+ *
+ * Three buttons rather than two yes/no rows, because that is the question as
+ * it is actually asked — which meals did you manage? Lunch and Dinner are
+ * independent, so both can be on; None is the explicit "neither", which is a
+ * real answer worth zero and is not the same as not having answered at all.
+ */
+export function MealPairRow({
+  challenge,
+  first,
+  second,
+  points,
+  onChange,
+  disabled,
+  isNew,
+}: {
+  challenge: ChallengeConfig;
+  first: TriState;
+  second: TriState;
+  points: number;
+  onChange: (which: "first" | "second" | "none") => void;
+  disabled?: boolean;
+  isNew?: boolean;
+}) {
+  const labels = challenge.mealLabels ?? { first: "Lunch", second: "Dinner" };
+  const answered = first !== "" || second !== "";
+  const none = first === "no" && second === "no";
+
+  const option = (
+    key: "first" | "second" | "none",
+    label: string,
+    on: boolean,
+  ) => (
+    <button
+      key={key}
+      type="button"
+      onClick={() => onChange(key)}
+      disabled={disabled}
+      aria-pressed={on}
+      aria-label={`${challenge.title}: ${label}`}
+      className={cn(
+        "h-12 flex-1 rounded-lg border text-sm font-medium transition-colors",
+        on
+          ? key === "none"
+            ? "border-muted-foreground/40 bg-muted text-foreground"
+            : "border-green-600 bg-green-600 text-white"
+          : "border-input bg-background hover:bg-muted",
+        disabled && "pointer-events-none opacity-50",
+      )}
+    >
+      {label}
+    </button>
+  );
+
+  return (
+    <ChallengeShell challenge={challenge} points={points} isNew={isNew}>
+      <input type="hidden" name={challenge.field} value={first} />
+      {challenge.secondField && (
+        <input type="hidden" name={challenge.secondField} value={second} />
+      )}
+
+      <div className="flex gap-2">
+        {option("first", labels.first, first === "yes")}
+        {option("second", labels.second, second === "yes")}
+        {option("none", "None", none)}
+      </div>
+
+      {!answered && (
+        <p className="mt-2 text-xs text-muted-foreground">Not answered yet.</p>
+      )}
+    </ChallengeShell>
+  );
+}
+
 export function YesNoRow({
   challenge,
   value,

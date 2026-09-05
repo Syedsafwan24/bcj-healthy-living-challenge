@@ -20,7 +20,11 @@ export type ChallengeRef =
   | "C8"
   | "C9";
 
-export type ChallengeKind = "quantitative" | "yesno";
+/**
+ * "mealPair" is C5, which BCJ splits across the two main meals: vegetables
+ * with lunch and with dinner are answered separately and score half each.
+ */
+export type ChallengeKind = "quantitative" | "yesno" | "mealPair";
 
 /** Column on `daily_entries` that carries this challenge's raw input. */
 export type ChallengeField =
@@ -30,6 +34,7 @@ export type ChallengeField =
   | "c3CookAtHome"
   | "c4NoSugary"
   | "c5Vegetables"
+  | "c5VegetablesDinner"
   | "c6NoLateFood"
   | "c8Mindfulness"
   | "c9ScreenTime";
@@ -46,6 +51,10 @@ export interface ChallengeConfig {
   /** Metric hue token from specification section 9.1. */
   metric: "water" | "steps" | "sleep" | "mind" | "nutrition";
   icon: "droplet" | "footprints" | "chef-hat" | "cup-soda" | "salad" | "moon-star" | "bed" | "brain" | "smartphone";
+  /** mealPair only: the second field, answered alongside `field`. */
+  secondField?: ChallengeField;
+  /** mealPair only: what each half is called on screen. */
+  mealLabels?: { first: string; second: string };
   /** Quantitative only: input value per point. */
   unit?: number;
   /** Quantitative only: decimal places used to score in integer arithmetic. */
@@ -65,6 +74,9 @@ export interface ChallengeConfig {
 }
 
 export const MAX_POINTS_PER_CHALLENGE = 10;
+
+/** Each half of a mealPair challenge — see ChallengeKind. */
+export const POINTS_PER_MEAL_HALF = MAX_POINTS_PER_CHALLENGE / 2;
 
 export const CHALLENGES: readonly ChallengeConfig[] = [
   {
@@ -121,10 +133,12 @@ export const CHALLENGES: readonly ChallengeConfig[] = [
   {
     ref: "C5",
     activatesWeek: 5,
-    title: "Eat vegetables with every main meal",
-    hint: "Yes earns 10 points. No earns 0.",
-    kind: "yesno",
+    title: "Eat vegetables with your main meals",
+    hint: "5 points for lunch, 5 for dinner. Neither earns 0.",
+    kind: "mealPair",
     field: "c5Vegetables",
+    secondField: "c5VegetablesDinner",
+    mealLabels: { first: "Lunch", second: "Dinner" },
     metric: "nutrition",
     icon: "salad",
   },

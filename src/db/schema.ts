@@ -264,7 +264,11 @@ export const dailyEntries = pgTable(
 
     c3CookAtHome: boolean("c3_cook_at_home"),
     c4NoSugary: boolean("c4_no_sugary"),
+    // C5 is answered per meal since 5 September 2026: vegetables with lunch,
+    // with dinner, or neither. c5_vegetables carries the lunch answer, so
+    // rows written under the old single yes/no keep their value.
     c5Vegetables: boolean("c5_vegetables"),
+    c5VegetablesDinner: boolean("c5_vegetables_dinner"),
     c6NoLateFood: boolean("c6_no_late_food"),
     c8Mindfulness: boolean("c8_mindfulness"),
     c9ScreenTime: boolean("c9_screen_time"),
