@@ -160,9 +160,11 @@ export async function correctEntry(
     actorParticipantId: values.participantId,
     oldValue: before
       ? {
-          dailyPoints: before.dailyPoints,
+          // Both come back from numeric columns as fixed-scale strings.
+          // Recorded as numbers so the audit reads 20.4, not "20.40".
+          dailyPoints: Number(before.dailyPoints ?? 0),
           maxPoints: before.maxPoints,
-          dailyPercentage: before.dailyPercentage,
+          dailyPercentage: Number(before.dailyPercentage ?? 0),
         }
       : null,
     newValue: {

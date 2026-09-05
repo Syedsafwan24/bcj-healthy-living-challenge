@@ -159,7 +159,9 @@ async function dailyTable(
       yesNo(r.lunch),
       yesNo(r.eveningSnack),
       yesNo(r.dinner),
-      r.dailyPoints ?? 0,
+      // Number, not the fixed-scale string the numeric column returns, so the
+      // Points column stays sortable and summable in Excel.
+      Number(r.dailyPoints ?? 0),
       r.maxPoints ?? 0,
       NUMERIC(r.dailyPercentage),
       r.status,
