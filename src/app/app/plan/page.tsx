@@ -16,7 +16,7 @@ export const dynamic = "force-dynamic";
  * `/app/plan` — the participant's own diet category and plan, V5 section 6
  * (specification section 5.1).
  *
- * Open item O-6: V5 section 5 states that a diet occasion earns its 2 points
+ * Open item O-6: V5 section 5 states that a meal earns its 5 points
  * only when the participant follows the approved plan for that occasion, and
  * that BCJ should approve the exact definition before launch. Whatever BCJ
  * decides is shown as helper text beside each meal — the copy below is the
@@ -93,7 +93,7 @@ export default async function PlanPage() {
                 <p className="font-medium">{occasion.title}</p>
                 <p className="text-sm text-muted-foreground">
                   Answer Yes when you followed your approved plan for this
-                  occasion.
+                  meal.
                 </p>
               </div>
               <span className="tabular shrink-0 text-sm font-semibold">
@@ -108,7 +108,7 @@ export default async function PlanPage() {
         <Info className="size-4" />
         <AlertTitle>What counts as following the plan</AlertTitle>
         <AlertDescription>
-          Answer Yes for an occasion when you ate what your assigned plan sets
+          Answer Yes for a meal when you ate what your assigned plan sets
           out for it. If you are unsure, ask a BCJ organiser rather than
           guessing — the same rule has to apply to everyone.
         </AlertDescription>

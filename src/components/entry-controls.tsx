@@ -82,7 +82,13 @@ export function QuantitativeRow({
           type="number"
           inputMode="decimal"
           min={0}
-          step={step}
+          // "any", not the challenge's increment. With step={1000} the browser
+          // treats 6,900 steps as invalid and silently refuses to submit the
+          // whole form — no error on the page, just a save button that appears
+          // to do nothing. The plus and minus buttons still move by the
+          // challenge's own increment; they compute it in nudge() and never
+          // relied on this attribute.
+          step="any"
           aria-label={challenge.title}
           className="tabular h-11 flex-1 text-center text-base font-medium"
         />

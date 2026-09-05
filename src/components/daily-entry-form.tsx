@@ -2,7 +2,8 @@
 
 import { useActionState, useEffect, useMemo, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { Lock, Utensils } from "lucide-react";
+import Link from "next/link";
+import { CheckCircle2, Lock, Utensils } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -129,6 +130,9 @@ export function DailyEntryForm({
   dietPlanNote?: string;
 }) {
   const [values, setValues] = useState<DailyFormValues>(initialValues);
+  // Cleared as soon as an answer changes, so the panel never reports a score
+  // that no longer matches what is on the form.
+  const [dirtySinceSave, setDirtySinceSave] = useState(false);
   const [state, action] = useActionState<EntryState | null, FormData>(
     submitDay,
     null,
@@ -137,17 +141,29 @@ export function DailyEntryForm({
   // Re-seed when the participant navigates to a different day.
   useEffect(() => {
     setValues(initialValues);
+    setDirtySinceSave(false);
   }, [initialValues, entryDate]);
 
+  // A toast says "saved" and then disappears, which is thin feedback for the
+  // one moment a participant most wants to know what they earned. The result
+  // stays on screen instead, and the page scrolls up to it — the save button
+  // is pinned to the bottom, so without this the confirmation lands above the
+  // fold and is never seen.
   useEffect(() => {
     if (state?.ok && state.saved) {
+      // The save is the new baseline: what is on the form now matches what
+      // was stored, so the panel is showing a current score, not a stale one.
+      setDirtySinceSave(false);
       toast.success(
-        `Saved. ${state.saved.dailyPoints} of ${state.saved.maxPoints} points, ${state.saved.dailyPercentage.toFixed(1)}%.`,
+        `Saved. ${state.saved.dailyPoints} of ${state.saved.maxPoints} points.`,
       );
+      window.scrollTo({ top: 0, behavior: "smooth" });
     } else if (state?.error) {
       toast.error(state.error);
     }
   }, [state]);
+
+  const saved = state?.ok && state.saved && !dirtySinceSave ? state.saved : null;
 
   const preview = useMemo(
     () => scoreEntry(settings, toInputs(values), entryDate),
@@ -167,6 +183,7 @@ export function DailyEntryForm({
   const dietAnswered = preview.diet.filter((d) => d.answered).length;
 
   function set<K extends keyof DailyFormValues>(key: K, value: DailyFormValues[K]) {
+    setDirtySinceSave(true);
     setValues((previous) => ({ ...previous, [key]: value }));
   }
 
@@ -204,6 +221,30 @@ export function DailyEntryForm({
   return (
     <form action={action} className="space-y-8">
       <input type="hidden" name="entryDate" value={entryDate} />
+
+      {saved && (
+        <div className="rounded-2xl border border-green-600/40 bg-green-50 p-5 text-center dark:bg-green-950/30">
+          <p className="flex items-center justify-center gap-2 text-lg font-semibold text-green-800 dark:text-green-300">
+            <CheckCircle2 className="size-5" />
+            Saved
+          </p>
+          <p className="tabular mt-2 text-2xl font-semibold">
+            {saved.dailyPoints} / {saved.maxPoints} points
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {saved.dailyPercentage.toFixed(1)}% for this day. You can change it
+            any time before the challenge ends.
+          </p>
+          <div className="mt-4 flex flex-wrap justify-center gap-2">
+            <Button asChild size="sm" variant="outline" className="h-11">
+              <Link href="/app/history">See all my days</Link>
+            </Button>
+            <Button asChild size="sm" variant="ghost" className="h-11">
+              <Link href="/app/progress">My progress</Link>
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* ---- score, live preview until saved ---- */}
       <section className="flex flex-col items-center rounded-2xl border bg-card px-5 py-8">
@@ -297,7 +338,7 @@ export function DailyEntryForm({
         </div>
         <p className="text-sm leading-relaxed text-muted-foreground">
           {dietPlanNote ??
-            "Two points for each occasion you followed your approved BCJ plan."}
+            "Five points for each meal you followed your approved BCJ plan."}
         </p>
 
         <div className="divide-y rounded-xl border bg-card">

@@ -1,14 +1,11 @@
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, Lock, Pencil } from "lucide-react";
+import { Lock } from "lucide-react";
 import type { Metadata } from "next";
 
-import { ScoreBar } from "@/components/score-ring";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { requireParticipant } from "@/lib/auth/guards";
-import { formatIsoDate, type IsoDate } from "@/lib/dates";
-import { getWeeklyScores, getWeekGrid } from "@/lib/queries";
-import { dailyMaxForWeek, formatPoints } from "@/lib/scoring";
+import { datesInWeek, formatIsoDateLong, type IsoDate } from "@/lib/dates";
+import { getEntriesBetween, getWeeklyScores } from "@/lib/queries";
 import {
   competitionClock,
   getSettings,
@@ -20,182 +17,194 @@ export const metadata: Metadata = { title: "History", robots: { index: false } }
 export const dynamic = "force-dynamic";
 
 /**
- * `/app/history` — the participant's own past days, editable inside the
- * correction window (specification section 5.1).
+ * `/app/history` — every day of the challenge on one screen.
+ *
+ * This used to show one week at a time behind Previous and Next buttons,
+ * which meant reaching week 2 from week 6 took four taps and a guess about
+ * which week a date fell in. Twelve rows of seven fit on a screen, so any day
+ * is now one tap from here and the shape of the whole challenge — what is
+ * done, what is empty — is visible at a glance.
  */
-export default async function HistoryPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ week?: string }>;
-}) {
+export default async function HistoryPage() {
   const session = await requireParticipant();
   const settings = await getSettings();
   const clock = competitionClock(settings);
-  const params = await searchParams;
 
-  const currentWeek = clock.currentWeek ?? (clock.finished ? settings.totalWeeks : 1);
-  const requested = Number(params.week);
-  const weekNo = Number.isInteger(requested)
-    ? Math.min(Math.max(requested, 1), settings.totalWeeks)
-    : currentWeek;
-
-  const [grid, weekly] = await Promise.all([
-    getWeekGrid(settings, session.participantId, weekNo),
+  const [entries, weekly] = await Promise.all([
+    getEntriesBetween(session.participantId, clock.firstDay, clock.lastDay),
     getWeeklyScores(session.participantId),
   ]);
 
-  const weekScore = weekly.find((w) => w.weekNo === weekNo);
-  const dailyMax = dailyMaxForWeek(weekNo, settings.maxActiveWeek);
+  const byDate = new Map(entries.map((e) => [e.entryDate, e]));
+  const byWeek = new Map(weekly.map((w) => [w.weekNo, w]));
 
-  // A day is "missed" once it is in the past with nothing recorded. Today is
-  // never missed — the day is not over — and future days are simply not due.
-  const missedDays = grid.filter(
-    ({ date, entry }) =>
-      date < clock.today && (!entry || entry.status === "missing"),
-  ).length;
+  const weeks = Array.from({ length: settings.totalWeeks }, (_, i) => i + 1);
+  const emptySoFar = Array.from({ length: settings.totalWeeks }, (_, i) =>
+    datesInWeek(clock.firstDay, i + 1),
+  )
+    .flat()
+    .filter((date) => {
+      if (date >= clock.today) return false;
+      const entry = byDate.get(date);
+      return !entry || entry.status === "missing";
+    });
 
   return (
     <div className="space-y-6">
-      <header className="space-y-4">
+      <header className="space-y-2">
         <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-          History
+          My days
         </h1>
+        <p className="text-muted-foreground">
+          Tap any day to fill it in or change it.
+        </p>
+      </header>
 
-        <div className="flex items-center justify-between gap-3">
-          <Button
-            asChild
-            variant="outline"
-            size="sm"
-            className="h-11"
-            disabled={weekNo <= 1}
-          >
-            <Link
-              href={`/app/history?week=${Math.max(1, weekNo - 1)}`}
-              aria-disabled={weekNo <= 1}
-              className={cn(weekNo <= 1 && "pointer-events-none opacity-50")}
-            >
-              <ChevronLeft className="size-4" />
-              <span className="ml-1 hidden sm:inline">Previous</span>
-            </Link>
-          </Button>
-
-          <div className="text-center">
-            <p className="font-semibold">Week {weekNo}</p>
-            <p className="tabular text-sm text-muted-foreground">
-              {Number(weekScore?.percentage ?? 0).toFixed(1)}% · max {dailyMax}/day
-            </p>
-            {missedDays > 0 && (
-              <p className="mt-1 text-xs font-medium text-amber-700 dark:text-amber-400">
-                {missedDays} day{missedDays === 1 ? "" : "s"} still empty
-              </p>
-            )}
-          </div>
-
-          <Button
-            asChild
-            variant="outline"
-            size="sm"
-            className="h-11"
-            disabled={weekNo >= settings.totalWeeks}
-          >
-            <Link
-              href={`/app/history?week=${Math.min(settings.totalWeeks, weekNo + 1)}`}
-              className={cn(
-                weekNo >= settings.totalWeeks && "pointer-events-none opacity-50",
-              )}
-            >
-              <span className="mr-1 hidden sm:inline">Next</span>
-              <ChevronRight className="size-4" />
+      {emptySoFar.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-500/40 bg-amber-50/60 p-4 dark:bg-amber-950/20">
+          <p className="text-sm">
+            <span className="font-medium text-amber-700 dark:text-amber-400">
+              {emptySoFar.length} day{emptySoFar.length === 1 ? "" : "s"} still
+              empty.
+            </span>{" "}
+            Each one scores 0% until you fill it in.
+          </p>
+          <Button asChild size="sm" variant="outline" className="h-11">
+            <Link href={`/app?date=${emptySoFar[emptySoFar.length - 1]}`}>
+              Fill in the most recent
             </Link>
           </Button>
         </div>
-      </header>
+      )}
 
-      <ul className="divide-y overflow-hidden rounded-xl border bg-card">
-        {grid.map(({ date, entry }) => {
-          const permission = participantMayWrite(settings, date as IsoDate);
-          const editable = permission.allowed && entry?.status !== "locked";
-          const future = date > clock.today;
-          const isToday = date === clock.today;
-          const empty = !entry || entry.status === "missing";
-          const missed = !future && !isToday && empty;
-          const percentage = Number(entry?.dailyPercentage ?? 0);
+      {/* ---- legend, so the colours need no explaining ---- */}
+      <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
+        <span className="flex items-center gap-2">
+          <span className="size-3 rounded bg-green-600" />
+          Filled in
+        </span>
+        <span className="flex items-center gap-2">
+          <span className="size-3 rounded bg-amber-400" />
+          Empty
+        </span>
+        <span className="flex items-center gap-2">
+          <span className="size-3 rounded ring-2 ring-primary ring-offset-1" />
+          Today
+        </span>
+        <span className="flex items-center gap-2">
+          <span className="size-3 rounded bg-muted" />
+          Not yet
+        </span>
+      </div>
+
+      {/* ---- every week, every day ---- */}
+      <div className="overflow-hidden rounded-xl border bg-card">
+        {weeks.map((weekNo) => {
+          const dates = datesInWeek(clock.firstDay, weekNo);
+          const score = byWeek.get(weekNo);
+          const started = dates[0] <= clock.today;
 
           return (
-            <li
-              key={date}
-              className={cn(
-                "flex flex-col gap-3 border-l-4 border-l-transparent p-4 sm:flex-row sm:items-center",
-                isToday && "border-l-primary bg-secondary/50",
-                missed && "border-l-amber-500 bg-amber-50/60 dark:bg-amber-950/20",
-              )}
+            <div
+              key={weekNo}
+              className="flex flex-col gap-3 border-b p-4 last:border-b-0 sm:flex-row sm:items-center"
             >
-              <div className="flex min-w-0 flex-1 items-center gap-3">
-                <div className="w-24 shrink-0">
-                  <p className="text-sm font-medium">{formatIsoDate(date)}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {new Intl.DateTimeFormat("en-GB", {
-                      timeZone: "UTC",
-                      weekday: "short",
-                    }).format(new Date(`${date}T12:00:00Z`))}
-                  </p>
-                </div>
-
-                <div className="min-w-0 flex-1">
-                  {future ? (
-                    <p className="text-sm text-muted-foreground">Not yet</p>
-                  ) : entry && entry.status !== "missing" ? (
-                    <ScoreBar
-                      percentage={percentage}
-                      label={`${formatIsoDate(date)}: ${percentage.toFixed(1)} per cent`}
-                    />
-                  ) : isToday ? (
-                    <p className="text-sm font-medium">Nothing filled in yet</p>
-                  ) : (
-                    <p className="text-sm font-medium text-amber-700 dark:text-amber-400">
-                      Missed · scored 0%
-                    </p>
-                  )}
-                </div>
+              <div className="w-28 shrink-0">
+                <p className="text-sm font-medium">Week {weekNo}</p>
+                <p className="tabular text-xs text-muted-foreground">
+                  {started
+                    ? `${Number(score?.percentage ?? 0).toFixed(1)}%`
+                    : "Not yet"}
+                </p>
               </div>
 
-              <div className="flex shrink-0 items-center gap-2 sm:w-52 sm:justify-end">
-                {isToday && (
-                  <Badge className="bg-primary text-primary-foreground">Today</Badge>
-                )}
-                {entry && entry.status !== "missing" && (
-                  <span className="tabular text-sm text-muted-foreground">
-                    {formatPoints(entry.dailyPoints)}/{entry.maxPoints}
-                  </span>
-                )}
-                {entry?.status === "locked" ? (
-                  <Badge variant="outline" className="gap-1">
-                    <Lock className="size-3" />
-                    Locked
-                  </Badge>
-                ) : future ? null : editable ? (
-                  <Button asChild size="sm" variant="outline" className="h-11">
-                    <Link href={`/app?date=${date}`}>
-                      <Pencil className="size-3.5" />
-                      <span className="ml-1">
-                        {entry && entry.status !== "missing" ? "Change" : "Fill in"}
-                      </span>
-                    </Link>
-                  </Button>
-                ) : (
-                  <Badge variant="outline">Too late</Badge>
-                )}
+              <div className="flex flex-1 flex-wrap gap-2">
+                {dates.map((date) => (
+                  <DayCell
+                    key={date}
+                    date={date as IsoDate}
+                    entry={byDate.get(date) ?? null}
+                    today={clock.today}
+                    writable={participantMayWrite(settings, date as IsoDate).allowed}
+                  />
+                ))}
               </div>
-            </li>
+            </div>
           );
         })}
-      </ul>
+      </div>
 
       <p className="text-sm leading-relaxed text-muted-foreground">
-        You can go back and fill in or change any day of the challenge, from any
-        week, until the last day of week 12. After that a BCJ organiser can
-        still correct a day for you, and every change is recorded.
+        You can fill in or change any day of the challenge until the last day of
+        week 12. After that a BCJ organiser can still correct a day for you, and
+        every change is recorded.
       </p>
     </div>
+  );
+}
+
+/**
+ * One day. A link when it can be opened, a plain box when it cannot, so a
+ * future day never looks tappable.
+ */
+function DayCell({
+  date,
+  entry,
+  today,
+  writable,
+}: {
+  date: IsoDate;
+  entry: { status: string; dailyPercentage: string | null } | null;
+  today: IsoDate;
+  writable: boolean;
+}) {
+  const dayNumber = Number(date.slice(8, 10));
+  const isToday = date === today;
+  const future = date > today;
+  const filled = entry !== null && entry.status !== "missing";
+  const locked = entry?.status === "locked";
+
+  const base =
+    "relative flex size-11 shrink-0 flex-col items-center justify-center rounded-lg text-sm font-medium tabular";
+
+  if (future) {
+    return (
+      <span
+        className={cn(base, "bg-muted text-muted-foreground/60")}
+        aria-label={`${formatIsoDateLong(date)}: not yet`}
+      >
+        {dayNumber}
+      </span>
+    );
+  }
+
+  const tone = filled
+    ? "bg-green-600 text-white hover:bg-green-700"
+    : "bg-amber-400 text-amber-950 hover:bg-amber-500";
+
+  const label = `${formatIsoDateLong(date)}: ${
+    filled
+      ? `${Number(entry?.dailyPercentage ?? 0).toFixed(0)} per cent`
+      : "nothing filled in"
+  }${isToday ? ", today" : ""}`;
+
+  const cell = (
+    <span
+      className={cn(
+        base,
+        tone,
+        isToday && "ring-2 ring-primary ring-offset-2",
+        !writable && !locked && "opacity-70",
+      )}
+    >
+      {dayNumber}
+      {locked && <Lock className="absolute right-0.5 top-0.5 size-2.5" />}
+    </span>
+  );
+
+  return (
+    <Link href={`/app?date=${date}`} aria-label={label} title={label}>
+      {cell}
+    </Link>
   );
 }

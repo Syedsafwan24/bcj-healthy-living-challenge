@@ -3,14 +3,21 @@ import { CalendarClock, CheckCircle2, Clock, Lock, TriangleAlert } from "lucide-
 import type { Metadata } from "next";
 
 import { DailyEntryForm, EMPTY_FORM, type DailyFormValues } from "@/components/daily-entry-form";
+import { DayStrip } from "@/components/day-strip";
 import type { TriState } from "@/components/entry-controls";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { requireParticipant } from "@/lib/auth/guards";
-import { formatIsoDateLong, weekNoFor, type IsoDate } from "@/lib/dates";
 import {
+  datesInWeek,
+  formatIsoDateLong,
+  weekNoFor,
+  type IsoDate,
+} from "@/lib/dates";
+import {
+  getEntriesBetween,
   getEntry,
   getFinalScore,
   getMissedDays,
@@ -74,13 +81,25 @@ export default async function TodayPage({
   // Derived from the entry's own date, never from today (section 4.2).
   const weekNo = weekNoFor(clock.firstDay, entryDate);
 
-  const [entry, profile, weekly, final, missed] = await Promise.all([
+  const [entry, profile, weekly, final, missed, recent] = await Promise.all([
     getEntry(session.participantId, entryDate),
     getParticipantProfile(session.participantId),
     getWeeklyScores(session.participantId),
     getFinalScore(session.participantId),
     getMissedDays(settings, session.participantId, clock.today),
+    // Only the week on screen, so the day screen still runs one small set of
+    // queries rather than reading the whole challenge.
+    getEntriesBetween(
+      session.participantId,
+      datesInWeek(clock.firstDay, weekNo)[0],
+      datesInWeek(clock.firstDay, weekNo)[6],
+    ),
   ]);
+
+  const stripWeek = datesInWeek(clock.firstDay, weekNo);
+  const filledDates = new Set(
+    recent.filter((e) => e.status !== "missing").map((e) => e.entryDate),
+  );
 
   const activeChallenges = activeChallengesForWeek(weekNo, settings.maxActiveWeek);
   const isRepeatPhase = weekNo > settings.maxActiveWeek;
@@ -160,6 +179,15 @@ export default async function TodayPage({
         </div>
       </header>
 
+      <DayStrip
+        week={stripWeek}
+        weekNo={weekNo}
+        totalWeeks={settings.totalWeeks}
+        today={clock.today}
+        current={entryDate}
+        filled={filledDates}
+      />
+
       {/* ---- days left behind ----
           Shown only on today's screen, and only about days already past.
           Today is never counted as missed: the day is not over, and telling
@@ -229,7 +257,7 @@ export default async function TodayPage({
         isRepeatPhase={isRepeatPhase}
         dietPlanNote={
           profile?.dietTitle
-            ? `Two points for each occasion you followed your ${profile.dietTitle} plan.`
+            ? `Five points for each meal you followed your ${profile.dietTitle} plan.`
             : undefined
         }
       />
