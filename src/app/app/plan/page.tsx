@@ -61,8 +61,8 @@ export default async function PlanPage() {
           <AlertTitle>No plan assigned yet</AlertTitle>
           <AlertDescription>
             A BCJ organiser assigns your diet category when they review your
-            registration. Your five diet occasions still count towards your
-            score in the meantime.
+            registration. Your lunch and dinner still count towards your score
+            in the meantime.
           </AlertDescription>
         </Alert>
       )}
@@ -70,7 +70,7 @@ export default async function PlanPage() {
       <section className="space-y-3">
         <div className="flex items-baseline justify-between">
           <h2 className="text-lg font-semibold tracking-tight">
-            The five occasions
+            Your two main meals
           </h2>
           <Badge variant="secondary">10 points a day</Badge>
         </div>

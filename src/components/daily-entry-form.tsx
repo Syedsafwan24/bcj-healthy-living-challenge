@@ -287,7 +287,7 @@ export function DailyEntryForm({
 
       <Separator />
 
-      {/* ---- diet, five occasions worth 2 points each ---- */}
+      {/* ---- diet, two main meals worth 5 points each ---- */}
       <section className="space-y-3">
         <div className="flex items-baseline justify-between gap-3">
           <h2 className="text-lg font-semibold tracking-tight">Your diet plan</h2>

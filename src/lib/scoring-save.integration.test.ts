@@ -78,7 +78,10 @@ suite("scoring-save against the database", () => {
   });
 
   it("writes the day, the week and the final score in one transaction", async () => {
-    // Week 2, day 1. Water 2.0 L, steps 7,400, diet 4/5 — vector T2.
+    // Week 2, day 1. Water 2.0 L, steps 7,400 — vector T2, recomputed under
+    // the two-meal diet rule. breakfast, mid-morning and evening snack are
+    // still written here on purpose: they are columns an old row can carry,
+    // and they must not add points. Lunch alone scores 5.
     const entryDate = addDays(settingsRow.startDate, 7);
 
     const saved = await saveEntry(settingsRow, {
@@ -94,13 +97,13 @@ suite("scoring-save against the database", () => {
     });
 
     expect(saved.weekNo).toBe(2);
-    expect(saved.dailyPoints).toBe(23);
+    expect(saved.dailyPoints).toBe(20);
     expect(saved.maxPoints).toBe(30);
-    expect(saved.dailyPercentage).toBe(76.6667);
+    expect(saved.dailyPercentage).toBe(66.6667);
 
-    // One day of 76.6667 across a seven-day week.
-    expect(saved.weekPercentage).toBe(10.9524);
-    expect(saved.finalScore).toBe(10.9524);
+    // One day of 66.6667 across a seven-day week.
+    expect(saved.weekPercentage).toBe(9.5238);
+    expect(saved.finalScore).toBe(9.5238);
 
     // The three calculated columns are on the row, and no endpoint wrote them.
     const [stored] = await db
@@ -114,9 +117,9 @@ suite("scoring-save against the database", () => {
       );
 
     expect(stored.weekNo).toBe(2);
-    expect(stored.dailyPoints).toBe(23);
+    expect(stored.dailyPoints).toBe(20);
     expect(stored.maxPoints).toBe(30);
-    expect(Number(stored.dailyPercentage)).toBe(76.6667);
+    expect(Number(stored.dailyPercentage)).toBe(66.6667);
     expect(stored.status).toBe("submitted");
   });
 
@@ -221,8 +224,8 @@ suite("scoring-save against the database", () => {
 
     expect(saved.weekNo).toBe(2);
     expect(saved.maxPoints).toBe(30);
-    expect(saved.dailyPoints).toBe(23);
-    expect(saved.dailyPercentage).toBe(76.6667);
+    expect(saved.dailyPoints).toBe(20);
+    expect(saved.dailyPercentage).toBe(66.6667);
   });
 
   it("recomputing a participant leaves every stored score unchanged", async () => {

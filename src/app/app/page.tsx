@@ -32,7 +32,7 @@ export const dynamic = "force-dynamic";
 /**
  * `/app` — today. Follows V6 section 6: profile and approved diet category,
  * current challenge week, all active lifestyle challenges, the water, steps
- * and sleep inputs, the Yes/No behaviour inputs, five diet inputs, the
+ * and sleep inputs, the Yes/No behaviour inputs, the two diet inputs, the
  * automatic daily score with maximum and percentage, weekly progress, final
  * score and submission status.
  */

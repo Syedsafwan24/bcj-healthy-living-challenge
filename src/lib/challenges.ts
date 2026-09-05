@@ -103,8 +103,8 @@ export const CHALLENGES: readonly ChallengeConfig[] = [
   {
     ref: "C4",
     activatesWeek: 4,
-    title: "No sugary drinks",
-    hint: "Yes earns 10 points. No earns 0.",
+    title: "No sugary drinks & desserts",
+    hint: "Sweet dishes count too. Yes earns 10 points. No earns 0.",
     kind: "yesno",
     field: "c4NoSugary",
     metric: "nutrition",
@@ -180,15 +180,21 @@ export interface DietOccasion {
   title: string;
 }
 
+/**
+ * BCJ reduced the diet section to the two main meals on 4 September 2026.
+ * It was five occasions worth two points each; it is now two worth five, so
+ * the diet total is still 10 and every daily maximum is unchanged.
+ *
+ * breakfast, mid_morning and evening_snack remain as nullable columns on
+ * daily_entries so existing answers are not destroyed, but nothing asks for
+ * them and nothing scores them any more.
+ */
 export const DIET_OCCASIONS: readonly DietOccasion[] = [
-  { field: "breakfast", title: "Breakfast" },
-  { field: "midMorning", title: "Mid-morning" },
   { field: "lunch", title: "Lunch" },
-  { field: "eveningSnack", title: "Evening snack" },
   { field: "dinner", title: "Dinner" },
 ] as const;
 
-export const POINTS_PER_DIET_OCCASION = 2;
+export const POINTS_PER_DIET_OCCASION = 5;
 export const DIET_MAX = DIET_OCCASIONS.length * POINTS_PER_DIET_OCCASION; // 10
 
 export function challengeByRef(ref: ChallengeRef): ChallengeConfig {

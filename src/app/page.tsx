@@ -61,7 +61,7 @@ export default function HomePage() {
           {[
             {
               title: "Every day",
-              body: "Each active challenge is worth up to 10 points, and the five diet occasions are worth 10 more. Your day is scored as a percentage of that day's maximum.",
+              body: "Each active challenge is worth up to 10 points, and your two main meals are worth 10 more. Your day is scored as a percentage of that day's maximum.",
             },
             {
               title: "Every week",
@@ -119,7 +119,7 @@ export default function HomePage() {
           <div className="mt-6 rounded-xl border bg-card p-5">
             <p className="font-medium">Your diet plan, every day from week one</p>
             <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-              {DIET_OCCASIONS.map((o) => o.title).join(", ")} — two points each,
+              {DIET_OCCASIONS.map((o) => o.title).join(", ")} — five points each,
               ten in total. BCJ assigns your plan from your age and weight when
               your registration is approved.
             </p>

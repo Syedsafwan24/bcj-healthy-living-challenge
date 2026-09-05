@@ -217,7 +217,7 @@ async function main() {
   await pp.fill('input[name="sleepHours"]', "8");
   for (const label of [
     "Cook all meals at home",
-    "No sugary drinks",
+    "No sugary drinks & desserts",
     "Eat vegetables with every main meal",
     "No eating after 8 PM",
     "10 minutes of mindfulness or breathing",
@@ -236,7 +236,7 @@ async function main() {
   const preview = await pp.locator("text=/98 \\/ 100/").count();
   check("the browser preview agrees with the server: 98 / 100", preview > 0);
 
-  await pp.click('button[type="submit"]:has-text("Submit this day")');
+  await pp.click('button[type="submit"]:has-text("Save my day")');
   await pp.waitForTimeout(4000);
 
   const [entry] = await db

@@ -31,9 +31,8 @@ const DIET_CATEGORIES = [
     maxWeight: null,
     sortOrder: 1,
     plan:
-      "Age-appropriate portions across five occasions: breakfast, mid-morning, " +
-      "lunch, evening snack and dinner. Follow the plan issued by the BCJ " +
-      "nutrition team for this age band.",
+      "Age-appropriate portions at lunch and dinner. Follow the plan issued " +
+      "by the BCJ nutrition team for this age band.",
   },
   {
     code: "kg_50_60",

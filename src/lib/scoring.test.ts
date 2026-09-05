@@ -35,15 +35,21 @@ function dayInWeek(weekNo: number, dayOffset = 0) {
   return addDays(SETTINGS.startDate, (weekNo - 1) * 7 + dayOffset);
 }
 
-const ALL_DIET: EntryInputs = {
-  breakfast: true,
-  midMorning: true,
-  lunch: true,
-  eveningSnack: true,
-  dinner: true,
-};
+/**
+ * BCJ replaced the five diet occasions with two main meals on 4 September
+ * 2026 — lunch and dinner, five points each. The diet total is still 10, so
+ * the vectors below that answer every occasion the same way (T1, T5, T7, T8)
+ * are unaffected and keep the totals printed in specification section 4.8.
+ *
+ * The partial ones are not: "diet 4 of 5" no longer exists as a state. Those
+ * vectors are recomputed here under the new rule and their original section
+ * 4.8 totals are recorded on each one, so the change stays auditable against
+ * BCJ's document.
+ */
+const ALL_DIET: EntryInputs = { lunch: true, dinner: true };
 
-const FOUR_DIET: EntryInputs = { ...ALL_DIET, dinner: false };
+/** One of the two meals: 5 of 10, the closest analogue to the old 4 of 5. */
+const HALF_DIET: EntryInputs = { lunch: true, dinner: false };
 
 describe("section 4.8 test vectors", () => {
   it("T1 — week 1, water 2.0 L, diet 5/5 → 18 / 20, 90.0000%", () => {
@@ -59,33 +65,38 @@ describe("section 4.8 test vectors", () => {
     expect(s.dailyPercentage).toBe(90.0);
   });
 
-  it("T2 — week 2, water 2.0 L, steps 7,400, diet 4/5 → 23 / 30, 76.6667%", () => {
+  // Section 4.8 prints 23 / 30 (76.6667%) for diet 4 of 5. Under the two-meal
+  // rule the same day scores diet 5 rather than 8: 8 + 7 + 5 = 20.
+  it("T2 — week 2, water 2.0 L, steps 7,400, diet 1/2 → 20 / 30, 66.6667%", () => {
     const s = scoreEntry(
       SETTINGS,
-      { waterLitres: 2.0, steps: 7400, ...FOUR_DIET },
+      { waterLitres: 2.0, steps: 7400, ...HALF_DIET },
       dayInWeek(2),
     );
     expect(s.activeChallenges).toBe(2);
-    expect(s.dailyPoints).toBe(23);
+    expect(s.dietEarned).toBe(5);
+    expect(s.dailyPoints).toBe(20);
     expect(s.maxPoints).toBe(30);
-    expect(s.dailyPercentage).toBe(76.6667);
+    expect(s.dailyPercentage).toBe(66.6667);
   });
 
-  it("T3 — week 3, water 3.0 L, steps 8,200, C3 Yes, diet 4/5 → 36 / 40, 90.0000%", () => {
+  // Section 4.8 prints 36 / 40 (90.0000%) for diet 4 of 5. Under the two-meal
+  // rule: 10 + 8 + 10 lifestyle, diet 5 → 33.
+  it("T3 — week 3, water 3.0 L, steps 8,200, C3 Yes, diet 1/2 → 33 / 40, 82.5000%", () => {
     const s = scoreEntry(
       SETTINGS,
       {
         waterLitres: 3.0,
         steps: 8200,
         c3CookAtHome: true,
-        ...FOUR_DIET,
+        ...HALF_DIET,
       },
       dayInWeek(3),
     );
     expect(s.activeChallenges).toBe(3);
-    expect(s.dailyPoints).toBe(36);
+    expect(s.dailyPoints).toBe(33);
     expect(s.maxPoints).toBe(40);
-    expect(s.dailyPercentage).toBe(90.0);
+    expect(s.dailyPercentage).toBe(82.5);
   });
 
   it("T4 — week 7 mixed inputs → 67 / 80, 83.7500%", () => {
@@ -170,27 +181,29 @@ describe("section 4.8 test vectors", () => {
     expect(s.dailyPercentage).toBe(60.0);
   });
 
-  it("T9 — a week 2 record scored while the competition is in week 7 → 23 / 30, 76.6667%", () => {
+  // Section 4.8 prints 23 / 30; the two-meal rule makes the same day 20 / 30.
+  // What this vector is really guarding is the week, not the total.
+  it("T9 — a week 2 record scored while the competition is in week 7 → 20 / 30, 66.6667%", () => {
     // The function is given only the entry's own date. If it read the clock
-    // instead, this would return 23 / 80 and the participant would be scored
+    // instead, this would return 20 / 80 and the participant would be scored
     // against seven challenges they had not yet been given.
     const entryDate = dayInWeek(2, 3);
     const s = scoreEntry(
       SETTINGS,
-      { waterLitres: 2.0, steps: 7400, ...FOUR_DIET },
+      { waterLitres: 2.0, steps: 7400, ...HALF_DIET },
       entryDate,
     );
     expect(s.weekNo).toBe(2);
     expect(s.activeChallenges).toBe(2);
-    expect(s.dailyPoints).toBe(23);
+    expect(s.dailyPoints).toBe(20);
     expect(s.maxPoints).toBe(30);
-    expect(s.dailyPercentage).toBe(76.6667);
+    expect(s.dailyPercentage).toBe(66.6667);
 
     // Scoring the same inputs again yields the same result, whatever the date
     // of the correction. The result is a function of (settings, inputs, date).
     const again = scoreEntry(
       SETTINGS,
-      { waterLitres: 2.0, steps: 7400, ...FOUR_DIET },
+      { waterLitres: 2.0, steps: 7400, ...HALF_DIET },
       entryDate,
     );
     expect(again).toEqual(s);
@@ -253,9 +266,28 @@ describe("section 4.3 — points per challenge", () => {
 });
 
 describe("section 4.4 — diet", () => {
-  it("is active from week 1 and worth 2 points per occasion", () => {
-    const s = scoreEntry(SETTINGS, { breakfast: true, lunch: true }, dayInWeek(1));
-    expect(s.dietEarned).toBe(4);
+  it("is active from week 1 and worth 5 points per meal", () => {
+    const s = scoreEntry(SETTINGS, { lunch: true }, dayInWeek(1));
+    expect(s.dietEarned).toBe(5);
+    expect(s.dietMax).toBe(10);
+  });
+
+  it("scores only lunch and dinner", () => {
+    // The three retired occasions are still columns on daily_entries, so an
+    // old row can still carry them. They must not add points.
+    const s = scoreEntry(
+      SETTINGS,
+      { breakfast: true, midMorning: true, eveningSnack: true },
+      dayInWeek(1),
+    );
+    expect(s.dietEarned).toBe(0);
+    expect(s.diet).toHaveLength(2);
+    expect(s.diet.map((d) => d.title)).toEqual(["Lunch", "Dinner"]);
+  });
+
+  it("both meals reach the same diet total the five occasions did", () => {
+    const s = scoreEntry(SETTINGS, { lunch: true, dinner: true }, dayInWeek(1));
+    expect(s.dietEarned).toBe(10);
     expect(s.dietMax).toBe(10);
   });
 
