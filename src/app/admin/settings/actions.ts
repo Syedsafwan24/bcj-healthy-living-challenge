@@ -18,11 +18,12 @@ import { requireAdmin } from "@/lib/auth/guards";
 import { requestIp } from "@/lib/auth/session";
 import { CHALLENGES } from "@/lib/challenges";
 import {
-  lockAllEntries,
+  lockEntriesThrough,
   sweepMissingDays,
-  unlockAllEntries,
+  unlockEntriesAfter,
 } from "@/lib/close-out";
 import { daysBetween, formatIsoDateLong, type IsoDate } from "@/lib/dates";
+import { closedBlocks } from "@/lib/entry-blocks";
 import { recomputeAll } from "@/lib/scoring-save";
 import { competitionClock, getSettings } from "@/lib/settings";
 import { fieldErrors, reauthSchema, settingsSchema } from "@/lib/validation";
@@ -312,7 +313,7 @@ export async function closeCompetition(
 
   const after = await getSettings();
   const sweep = await sweepMissingDays(after, through);
-  const locked = await lockAllEntries(clock.lastDay);
+  const locked = await lockEntriesThrough(clock.lastDay);
 
   const ip = await requestIp();
   await recordAudit({
@@ -405,14 +406,28 @@ export async function reopenCompetition(
   });
 
   await db.update(settings).set({ closedAt: null }).where(eq(settings.id, 1));
-  const unlocked = await unlockAllEntries();
+
+  // Only the days reopening can actually give back. Weeks 1–4 closed at the
+  // end of their own catch-up week, not because anybody pressed anything, so
+  // reopening the competition does not reopen them — the nightly job would
+  // lock them again the same night, and telling a participant a day is open
+  // when it is not is worse than not reopening it.
+  const after = await getSettings();
+  const stillClosed = closedBlocks(
+    after.startDate as IsoDate,
+    after.totalWeeks,
+    competitionClock(after).today,
+  ).at(-1);
+  const unlocked = await unlockEntriesAfter(stillClosed?.lastDay ?? null);
 
   await recordAudit({
     action: "competition.reopened",
     entityType: "settings",
     actorAdminId: admin.adminId,
     oldValue: before.closedAt.toISOString(),
-    newValue: `open; ${unlocked} entries unlocked`,
+    newValue: `open; ${unlocked} entries unlocked${
+      stillClosed ? `; ${stillClosed.label} stay closed on their own deadline` : ""
+    }`,
     reason:
       String(formData.get("reason") ?? "").trim() ||
       "Reopened by an organiser",
@@ -424,7 +439,12 @@ export async function reopenCompetition(
 
   return {
     ok: true,
-    message: `The competition is open again and ${unlocked} day${unlocked === 1 ? "" : "s"} can be changed. Close it again once the correction is made.`,
+    message:
+      `The competition is open again and ${unlocked} day${unlocked === 1 ? "" : "s"} can be changed. ` +
+      (stillClosed
+        ? `Weeks 1–${stillClosed.lastWeek} stay closed: they passed their own catch-up deadline. `
+        : "") +
+      "Close it again once the correction is made.",
   };
 }
 

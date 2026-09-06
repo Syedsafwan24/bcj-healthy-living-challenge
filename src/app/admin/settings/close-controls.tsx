@@ -31,10 +31,11 @@ import {
 /**
  * Closing the competition — the moment BCJ declares the results final.
  *
- * The 12 weeks ending does not do this on its own. Days stay open afterwards
- * so anyone who fell behind can fill in what they missed, and how long that
- * grace period runs is the organisers' decision, not the calendar's. This is
- * where that decision is made.
+ * The earlier four-week blocks shut on their own deadlines — weeks 1–4 at the
+ * end of week 5, weeks 5–8 at the end of week 9. The last block has no
+ * catch-up week inside the challenge, so it is the one this governs: it stays
+ * open past the last day until an organiser decides the stragglers have had
+ * long enough. Closing is also what makes the whole result final.
  *
  * Behind a dialog rather than a bare button: it takes the app away from every
  * participant at once. Reopening asks for a password, on the same reasoning as
@@ -126,8 +127,10 @@ export function CloseControls({
             <p>
               Reopen it only to let somebody finish what they missed. It asks
               for your password
-              {requireTotp ? " and authenticator code" : ""}, unlocks every day
-              again, and is recorded in the audit history.
+              {requireTotp ? " and authenticator code" : ""}, and is recorded in
+              the audit history. It gives back only the days whose own four-week
+              deadline has not passed — weeks that closed on their own stay
+              closed.
             </p>
           </div>
         </CardHeader>
@@ -189,24 +192,29 @@ export function CloseControls({
           {weeksOver ? (
             <p>
               The last scorable day was{" "}
-              <strong className="text-foreground">{lastDay}</strong>. Days are
-              still open so anyone who fell behind can fill in what they missed,
-              and participants are told the results are waiting on your
-              decision. Close it when you are satisfied everyone has had their
-              chance.
+              <strong className="text-foreground">{lastDay}</strong>. The final
+              four weeks are still open so anyone who fell behind can fill in
+              what they missed, and participants are told the results are
+              waiting on your decision. Close it when you are satisfied everyone
+              has had their chance. The earlier blocks have already shut on
+              their own deadlines — see Entry deadlines below.
             </p>
           ) : (
             <p>
               The challenge runs to{" "}
-              <strong className="text-foreground">{lastDay}</strong>. Days stay
-              open after that so anyone behind can catch up, until you close it
-              here.
+              <strong className="text-foreground">{lastDay}</strong>. Each
+              four-week block shuts a week after it ends, on its own; the final
+              block stays open past the last day until you close it here.
             </p>
           )}
           <p>
             Closing scores every unfilled day at 0%, makes every recorded day
             final, and stops participants changing anything. The results and
             exports do not change afterwards.
+          </p>
+          <p>
+            Reopening later gives back only the days whose own block deadline
+            has not passed. Weeks that closed on their own stay closed.
           </p>
           {outstandingDays > 0 && (
             <p>

@@ -5,8 +5,14 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { settings, type Settings } from "@/db/schema";
 import {
+  blockForDate,
+  blockIsClosed,
+  type EntryBlock,
+} from "@/lib/entry-blocks";
+import {
   addDays,
   daysBetween,
+  formatIsoDateLong,
   isScorableDate,
   minutesIntoDayInZone,
   timeToMinutes,
@@ -110,6 +116,7 @@ export type WriteRefusal =
   | "not_started"
   | "outside_competition"
   | "future_date"
+  | "block_closed"
   | "competition_closed";
 
 export interface WritePermission {
@@ -117,26 +124,32 @@ export interface WritePermission {
   reason?: WriteRefusal;
   /** The last day of week 12. Nothing later than this is ever scorable. */
   lastScorableDay?: IsoDate;
+  /** The four-week block this date belongs to, when it has one. */
+  block?: EntryBlock;
 }
 
 /**
  * Whether a participant may write their own record for `entryDate`.
  *
- * BCJ's rule, which replaces the rolling correction window assumed under O-4:
- * every day of the challenge stays open to the participant until an organiser
- * closes the competition. Someone who joins in week 5, or who falls behind,
- * can go back and fill in earlier weeks — and the 12 weeks ending does not by
- * itself take that away. BCJ decides when the book is shut, which gives the
- * stragglers a grace period of whatever length the organisers think fair.
+ * BCJ fills the challenge in in four-week blocks, each with one further week
+ * to catch up in: weeks 1–4 stay open through week 5, weeks 5–8 through week
+ * 9, and then they are final. Somebody who joins in week 3, or falls behind in
+ * week 6, has until the end of that block's catch-up week to go back — and not
+ * a day longer. See lib/entry-blocks.ts for the shape of it.
  *
- * Two things still hold regardless. A day outside the 12 weeks is never
- * scorable, so the grace period lets people fill in the past, not extend the
- * challenge. And a day cannot be filled in before it has happened.
+ * The final block has no catch-up week inside the challenge, so it is the one
+ * the organisers close by hand. That is deliberate: it lets BCJ decide how long
+ * the last stragglers get, and closing is also what makes the whole result
+ * final.
+ *
+ * Two things hold regardless. A day outside the 12 weeks is never scorable, so
+ * a catch-up week buys time to fill in the past rather than extra days to
+ * compete on. And a day cannot be filled in before it has happened.
  *
  * The daily cutoff no longer refuses anything here. Enforcing it would be
  * theatre: a participant locked out at 23:59 could write the same day as a
- * past date the next morning. It still governs the nightly job, which is the
- * only place it means anything.
+ * past date the next morning, right up to the block deadline. It still governs
+ * the nightly job, which is the only place it means anything.
  *
  * `settings.correction_days` no longer governs this. It is left on the row so
  * no migration is needed, and is not exposed in the settings form.
@@ -157,24 +170,56 @@ export function participantMayWrite(
   const age = daysBetween(entryDate, clock.today);
   if (age < 0) return { allowed: false, reason: "future_date" };
 
-  // The one thing that shuts a day. An organiser can still correct one
-  // afterwards, and the audit log records it.
+  const block =
+    blockForDate(row.startDate as IsoDate, row.totalWeeks, entryDate) ??
+    undefined;
+
+  // Checked before the block deadline so that closing the competition early
+  // gives one reason rather than two, and the message names the decision
+  // rather than a date that has not arrived.
   if (clock.closed) {
-    return { allowed: false, reason: "competition_closed", lastScorableDay };
+    return {
+      allowed: false,
+      reason: "competition_closed",
+      lastScorableDay,
+      block,
+    };
   }
 
-  return { allowed: true, lastScorableDay };
+  // This block's own deadline, which has already passed for the earlier ones.
+  if (block && blockIsClosed(block, clock.today)) {
+    return { allowed: false, reason: "block_closed", lastScorableDay, block };
+  }
+
+  return { allowed: true, lastScorableDay, block };
 }
 
-export function refusalMessage(reason: WriteRefusal, row: Settings): string {
-  switch (reason) {
+/**
+ * Takes the whole permission rather than the reason alone: a closed block has
+ * to name its own weeks and its own date, and "that is closed" without saying
+ * which weeks or when is the kind of message people bring to an organiser.
+ */
+export function refusalMessage(
+  permission: WritePermission,
+  row: Settings,
+): string {
+  switch (permission.reason) {
     case "not_started":
       return `The challenge starts on ${row.startDate}. You can fill in your first day then.`;
     case "outside_competition":
       return "That date falls outside the 12-week challenge.";
     case "future_date":
       return "You cannot fill in a day before it happens.";
+    case "block_closed": {
+      const block = permission.block;
+      if (!block || !block.closesAfter) {
+        return "Those weeks are closed. Ask a BCJ organiser if this day needs correcting.";
+      }
+      return `${block.label} closed on ${formatIsoDateLong(block.closesAfter)}, so this day can no longer be changed here. Ask a BCJ organiser if it needs correcting.`;
+    }
     case "competition_closed":
       return "The organisers have closed the challenge, so days can no longer be changed here. Ask a BCJ organiser if something needs correcting.";
+    default:
+      return "This day cannot be changed here. Ask a BCJ organiser if it needs correcting.";
   }
 }

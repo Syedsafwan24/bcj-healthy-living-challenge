@@ -12,6 +12,12 @@ import {
   formatIsoDateLong,
   type IsoDate,
 } from "@/lib/dates";
+import {
+  blockIsClosed,
+  blockIsClosingNow,
+  daysUntilBlockCloses,
+  entryBlocks,
+} from "@/lib/entry-blocks";
 import { dailyMaxForWeek } from "@/lib/scoring";
 import { env } from "@/lib/env";
 import { competitionClock, getSettings } from "@/lib/settings";
@@ -65,6 +71,8 @@ export default async function SettingsPage() {
   ]);
 
   const outstandingDays = Math.max(0, activeCount * elapsed - recordedDays);
+
+  const blocks = entryBlocks(clock.firstDay, settings.totalWeeks);
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -137,6 +145,84 @@ export default async function SettingsPage() {
         requireTotp={env.adminRequireTotp}
         participantCount={participantCount}
       />
+
+      {/* ---- when each block of the challenge shuts ---- */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Entry deadlines</CardTitle>
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            The challenge is filled in four weeks at a time, and each block gets
+            one further week to catch up before it closes for good. These
+            deadlines are automatic — the nightly job scores every day still
+            empty at 0% and makes the block final. Only the last block waits for
+            you.
+          </p>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b text-left text-muted-foreground">
+                  <th className="py-2 pr-4 font-medium">Weeks</th>
+                  <th className="py-2 pr-4 font-medium">Days covered</th>
+                  <th className="py-2 pr-4 font-medium">Catch-up week</th>
+                  <th className="py-2 font-medium">Closes</th>
+                </tr>
+              </thead>
+              <tbody>
+                {blocks.map((block) => {
+                  const closed =
+                    clock.closed || blockIsClosed(block, clock.today);
+                  const closingNow = blockIsClosingNow(block, clock.today);
+                  const left = daysUntilBlockCloses(block, clock.today);
+
+                  return (
+                    <tr key={block.index} className="border-b last:border-0">
+                      <td className="py-2 pr-4 font-medium">
+                        {block.firstWeek}–{block.lastWeek}
+                      </td>
+                      <td className="py-2 pr-4 text-muted-foreground">
+                        {formatIsoDateLong(block.firstDay)} –{" "}
+                        {formatIsoDateLong(block.lastDay)}
+                      </td>
+                      <td className="tabular py-2 pr-4 text-muted-foreground">
+                        {block.catchUpWeek ?? "—"}
+                      </td>
+                      <td className="py-2">
+                        {closed ? (
+                          <span className="text-muted-foreground">
+                            Closed
+                            {block.closesAfter
+                              ? ` after ${formatIsoDateLong(block.closesAfter)}`
+                              : " by an organiser"}
+                          </span>
+                        ) : block.closesAfter ? (
+                          <span
+                            className={
+                              closingNow
+                                ? "font-medium text-amber-700 dark:text-amber-400"
+                                : undefined
+                            }
+                          >
+                            {formatIsoDateLong(block.closesAfter)}
+                            {closingNow && left !== null
+                              ? ` — in ${left} day${left === 1 ? "" : "s"}`
+                              : ""}
+                          </span>
+                        ) : (
+                          <span className="font-medium">
+                            When you close the competition
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* ---- what the current settings mean ---- */}
       <Card>

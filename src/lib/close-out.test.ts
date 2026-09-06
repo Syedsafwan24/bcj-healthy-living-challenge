@@ -68,7 +68,7 @@ suite("closing the competition", () => {
         ('${ALICE}','2026-09-03',1,'missing',0,10,0)`);
 
       process.env.DATABASE_URL = scratch;
-      const { sweepMissingDays, lockAllEntries, unlockAllEntries } = await import(
+      const { sweepMissingDays, lockEntriesThrough, unlockEntriesAfter } = await import(
         "@/lib/close-out"
       );
 
@@ -115,7 +115,7 @@ suite("closing the competition", () => {
 
       /* ---- locking ---- */
 
-      const locked = await lockAllEntries("2026-11-24" as any);
+      const locked = await lockEntriesThrough("2026-11-24" as any);
       expect(locked).toBe(1);
 
       const [{ count: stillMissing }] = await sql.unsafe(
@@ -126,11 +126,11 @@ suite("closing the competition", () => {
       expect(stillMissing).toBe(9);
 
       // Idempotent too — a second close locks nothing further.
-      expect(await lockAllEntries("2026-11-24" as any)).toBe(0);
+      expect(await lockEntriesThrough("2026-11-24" as any)).toBe(0);
 
       /* ---- reopening ---- */
 
-      expect(await unlockAllEntries()).toBe(1);
+      expect(await unlockEntriesAfter(null)).toBe(1);
       const [{ count: anyLocked }] = await sql.unsafe(
         `SELECT count(*)::int FROM daily_entries WHERE status = 'locked'`,
       );

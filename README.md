@@ -266,33 +266,62 @@ src/
 
 ---
 
-## Closing the competition
+## Entry deadlines
 
-The 12 weeks ending and the competition closing are two different things.
+The challenge is filled in **four weeks at a time**, and each block gets one
+further week to catch up before it closes for good.
 
-A participant may fill in or change **any** day of the challenge, not only a
-recent one — someone who registers in week 5, or who falls behind, can go back
-and complete earlier weeks. That does not stop on the last day of week 12.
-Days stay open until an organiser presses **Close the competition** on
-`/admin/settings`, so BCJ chooses how long the stragglers get rather than the
-calendar choosing for them. In the meantime participants see a notice saying
-the weeks are over and that closing is the organisers' decision.
+| Block | Days it covers | Caught up in | Closes after |
+| --- | --- | --- | --- |
+| Weeks 1–4 | 19 Jun – 16 Jul 2026 | week 5 | 23 Jul 2026 |
+| Weeks 5–8 | 17 Jul – 13 Aug 2026 | week 9 | 20 Aug 2026 |
+| Weeks 9–12 | 14 Aug – 10 Sep 2026 | — | when an organiser closes it |
+
+So during week 5 a participant may still fill in anything from weeks 1 to 5.
+The moment week 6 begins, weeks 1–4 are final: every day left empty in them
+scores 0% for good and only an organiser can change one. Somebody who registers
+in week 3 has until the end of week 5 to complete weeks 1 and 2, and not a day
+longer.
+
+`src/lib/entry-blocks.ts` is the whole rule, as pure date arithmetic, with the
+boundary cases pinned down in `entry-blocks.test.ts`. A block is open on its
+closing date and shut the morning after.
+
+The nightly job locks each block as its deadline passes. Blocks close in order,
+so it locks through the newest closed block's last day, which covers every
+earlier one and makes the job safe to run twice.
+
+Participants are warned for the whole of a catch-up week — on the day screen,
+in their history, and in the evening reminder, each naming that participant's
+own count of empty days in the block that is about to shut. That warning is the
+only one anybody gets.
+
+### The last block, and closing the competition
+
+Weeks 9–12 have no week 13 to be caught up in, so they have no automatic
+deadline. They stay open past the last day of the challenge until an organiser
+presses **Close the competition** on `/admin/settings` — which lets BCJ decide
+how long the final stragglers get, rather than the calendar deciding for them.
+In the meantime participants see a notice saying the weeks are over and that
+closing is the organisers' decision.
 
 Closing does three things at once, and they are the same three the nightly job
-would do: it records `settings.closed_at`, writes a `missing` row scoring 0%
-for every day nobody filled in, and locks every recorded day. After that no
-participant can write anything, and the results and exports are final.
+does at a block deadline: it records `settings.closed_at`, writes a `missing`
+row scoring 0% for every day nobody filled in, and locks every recorded day.
+After that no participant can write anything, and the results and exports are
+final.
 
 Closing needs no re-authentication, on the same reasoning as locking the
 scoring rules — it only ever makes the competition stricter. **Reopening asks
-for the organiser's password and authenticator code**, unlocks every day again,
-and is recorded in the audit history, as `competition.closed` and
-`competition.reopened`.
+for the organiser's password and authenticator code**, and gives back only the
+days whose own block deadline has not passed: weeks that closed on their own
+stay closed. Both are recorded in the audit history, as `competition.closed`
+and `competition.reopened`.
 
 The daily submission cutoff no longer refuses a participant write. Enforcing it
 would have been theatre: somebody locked out at 23:59 could write the same date
-as a past day the next morning. It still bounds the nightly job, which is the
-only place it decides anything.
+as a past day the next morning, right up to the block deadline. It still bounds
+the nightly job, which is the only place it decides anything.
 
 ---
 
@@ -300,9 +329,10 @@ only place it decides anything.
 
 One run per day after the cutoff, in the settings timezone. It inserts a
 `missing` entry for every active participant with no record for a past scorable
-date, scores those days at 0% when `missing_scores_zero` is true, locks every
-entry once an organiser has closed the competition, and recomputes the affected
-weekly and final scores.
+date, scores those days at 0% when `missing_scores_zero` is true, locks each
+four-week block once its catch-up week has ended (and every entry once an
+organiser has closed the competition), and recomputes the affected weekly and
+final scores.
 
 `vercel.json` schedules it at 21:05 UTC, which is 00:05 in Asia/Riyadh. Adjust
 that if the timezone or the cutoff changes.

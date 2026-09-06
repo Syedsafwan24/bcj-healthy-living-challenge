@@ -5,8 +5,14 @@ import { db } from "@/db";
 import { dailyEntries, participants } from "@/db/schema";
 import { sendDailyReminder } from "@/lib/email";
 import { env } from "@/lib/env";
+import { formatIsoDateLong, type IsoDate } from "@/lib/dates";
+import {
+  blockIsClosingNow,
+  daysUntilBlockCloses,
+  entryBlocks,
+} from "@/lib/entry-blocks";
 import { sendPushToParticipants } from "@/lib/push";
-import { getMissedDays } from "@/lib/queries";
+import { countEmptyDaysInRange, getMissedDays } from "@/lib/queries";
 import { competitionClock, getSettings } from "@/lib/settings";
 
 /**
@@ -21,6 +27,11 @@ import { competitionClock, getSettings } from "@/lib/settings";
  *
  * Nobody who has already filled in today hears from it, so keeping up means
  * silence. Nothing is sent before the challenge starts or after it ends.
+ *
+ * During a four-week block's catch-up week it changes its tune. Those days
+ * stop being fixable when the deadline passes, so the reminder leads with the
+ * deadline and the participant's own count of empty days in that block — the
+ * one night it is worth interrupting somebody who is otherwise up to date.
  */
 
 export const dynamic = "force-dynamic";
@@ -38,6 +49,8 @@ interface ReminderResult {
   pushed: number;
   pushFailed: number;
   pushRemoved: number;
+  /** The block being caught up, when this is a catch-up week. */
+  closingBlock?: string;
   message?: string;
 }
 
@@ -107,15 +120,50 @@ async function runReminder(): Promise<ReminderResult> {
   const outstanding = people.filter((p) => !done.has(p.id));
   base.candidates = outstanding.length;
 
+  // Weeks 1–4 are caught up during week 5, weeks 5–8 during week 9. In one of
+  // those weeks the reminder is a deadline warning rather than a nudge.
+  const closingBlock =
+    entryBlocks(clock.firstDay, settings.totalWeeks).find((block) =>
+      blockIsClosingNow(block, clock.today),
+    ) ?? null;
+  const daysLeft = closingBlock
+    ? (daysUntilBlockCloses(closingBlock, clock.today) ?? 0)
+    : 0;
+  if (closingBlock) base.closingBlock = closingBlock.label;
+
   if (env.smtpConfigured) {
     for (const person of outstanding.filter((p) => p.reminderEmails)) {
       try {
         const missed = await getMissedDays(settings, person.id, clock.today);
+        // Counted per person: a deadline warning that names a number has to
+        // name that participant's own number, or it is ignored by the people
+        // who are up to date and disbelieved by the people who are not.
+        const blockEmpty =
+          closingBlock && closingBlock.closesAfter
+            ? await countEmptyDaysInRange(
+                person.id,
+                closingBlock.firstDay,
+                closingBlock.lastDay,
+                clock.today,
+              )
+            : 0;
+
         const delivery = await sendDailyReminder({
           to: person.email,
           firstName: person.fullName.trim().split(/\s+/)[0] || "there",
           weekNo: clock.currentWeek ?? 1,
           emptyDays: missed.count,
+          deadline:
+            closingBlock && closingBlock.closesAfter
+              ? {
+                  label: closingBlock.label,
+                  closesOn: formatIsoDateLong(
+                    closingBlock.closesAfter as IsoDate,
+                  ),
+                  emptyDays: blockEmpty,
+                  daysLeft,
+                }
+              : undefined,
         });
         if (delivery.sent) base.sent += 1;
         else base.failed += 1;
@@ -136,11 +184,20 @@ async function runReminder(): Promise<ReminderResult> {
   // readable on a locked screen.
   const push = await sendPushToParticipants(
     outstanding.map((p) => p.id),
-    {
-      title: "Fill in today",
-      body: `Week ${clock.currentWeek ?? 1} — your day is still empty. It takes under a minute.`,
-      url: "/app",
-    },
+    closingBlock && closingBlock.closesAfter
+      ? {
+          title: `${closingBlock.label} close in ${daysLeft} day${daysLeft === 1 ? "" : "s"}`,
+          // No personal count here: a notification is readable on a locked
+          // screen, so it says what is closing and when, and nothing about
+          // how far behind this particular person is.
+          body: `Fill in any empty days from ${closingBlock.label.toLowerCase()} before ${formatIsoDateLong(closingBlock.closesAfter as IsoDate)}. After that they score 0%.`,
+          url: "/app/history",
+        }
+      : {
+          title: "Fill in today",
+          body: `Week ${clock.currentWeek ?? 1} — your day is still empty. It takes under a minute.`,
+          url: "/app",
+        },
   );
   base.pushed = push.sent;
   base.pushFailed = push.failed;

@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 
 import { DailyEntryForm, EMPTY_FORM, type DailyFormValues } from "@/components/daily-entry-form";
 import { DayStrip } from "@/components/day-strip";
+import { BlockClosingNotice } from "@/components/block-notice";
 import { WeeksOverNotice } from "@/components/weeks-over-notice";
 import type { TriState } from "@/components/entry-controls";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -18,6 +19,7 @@ import {
   type IsoDate,
 } from "@/lib/dates";
 import {
+  countEmptyDaysInRange,
   getEntriesBetween,
   getEntry,
   getFinalScore,
@@ -25,6 +27,12 @@ import {
   getParticipantProfile,
   getWeeklyScores,
 } from "@/lib/queries";
+import {
+  blockIsClosed,
+  blockIsClosingNow,
+  daysUntilBlockCloses,
+  entryBlocks,
+} from "@/lib/entry-blocks";
 import { activeChallengesForWeek } from "@/lib/scoring";
 import {
   competitionClock,
@@ -90,20 +98,39 @@ export default async function TodayPage({
   // Derived from the entry's own date, never from today (section 4.2).
   const weekNo = weekNoFor(clock.firstDay, entryDate);
 
-  const [entry, profile, weekly, final, missed, recent] = await Promise.all([
-    getEntry(session.participantId, entryDate),
-    getParticipantProfile(session.participantId),
-    getWeeklyScores(session.participantId),
-    getFinalScore(session.participantId),
-    getMissedDays(settings, session.participantId, clock.today),
-    // Only the week on screen, so the day screen still runs one small set of
-    // queries rather than reading the whole challenge.
-    getEntriesBetween(
-      session.participantId,
-      datesInWeek(clock.firstDay, weekNo)[0],
-      datesInWeek(clock.firstDay, weekNo)[6],
-    ),
-  ]);
+  // The four-week block being caught up right now, if any. Weeks 1–4 are
+  // caught up during week 5, weeks 5–8 during week 9, and after that block's
+  // last day every empty day in it scores 0% for good — so this warning is
+  // the only one anybody gets.
+  const closingBlock =
+    entryBlocks(clock.firstDay, settings.totalWeeks).find((block) =>
+      blockIsClosingNow(block, clock.today),
+    ) ?? null;
+
+  const [entry, profile, weekly, final, missed, recent, blockEmptyDays] =
+    await Promise.all([
+      getEntry(session.participantId, entryDate),
+      getParticipantProfile(session.participantId),
+      getWeeklyScores(session.participantId),
+      getFinalScore(session.participantId),
+      getMissedDays(settings, session.participantId, clock.today),
+      // Only the week on screen, so the day screen still runs one small set of
+      // queries rather than reading the whole challenge.
+      getEntriesBetween(
+        session.participantId,
+        datesInWeek(clock.firstDay, weekNo)[0],
+        datesInWeek(clock.firstDay, weekNo)[6],
+      ),
+      // Only asked for during a catch-up week, and only about that block.
+      closingBlock
+        ? countEmptyDaysInRange(
+            session.participantId,
+            closingBlock.firstDay,
+            closingBlock.lastDay,
+            clock.today,
+          )
+        : Promise.resolve(0),
+    ]);
 
   const stripWeek = datesInWeek(clock.firstDay, weekNo);
   const filledDates = new Set(
@@ -135,6 +162,35 @@ export default async function TodayPage({
       EMPTY_FORM;
 
   const readOnly = !permission.allowed || entry?.status === "locked";
+
+  // Why this day is final, said in the terms that actually apply: a block
+  // that passed its own catch-up deadline, or the whole competition being
+  // closed. "This is locked" without saying which and when is the kind of
+  // message people bring to an organiser.
+  const block = permission.block;
+  const lockedReason = clock.closed
+    ? "The organisers have closed the challenge, so this day is final. Only a BCJ organiser can change it now."
+    : block?.closesAfter
+      ? `${block.label} closed after ${formatIsoDateLong(block.closesAfter)}, so this day is final. Only a BCJ organiser can change it now.`
+      : "This day is final. Only a BCJ organiser can change it now.";
+
+  // The same fact in four words, for the notice that sits down beside the
+  // controls. The banner above the score already gives the full explanation,
+  // and printing it twice on one screen reads as a glitch.
+  const formNotice = !permission.allowed
+    ? permission.reason === "block_closed" && block
+      ? `${block.label} are closed.`
+      : permission.reason === "competition_closed"
+        ? "The challenge is closed."
+        : permission.reason === "future_date"
+          ? "This day has not happened yet."
+          : "This day cannot be filled in."
+    : lockedReason;
+
+  // And how long is left on a day that is still open.
+  const stillOpenUntil = block?.closesAfter
+    ? `You can change this day until ${formatIsoDateLong(block.closesAfter)}, when ${block.label.toLowerCase()} close.`
+    : "You can change this day until the organisers close the challenge.";
   const alreadySubmitted =
     entry !== null && entry.status !== "missing" && entry.submittedAt !== null;
 
@@ -191,6 +247,14 @@ export default async function TodayPage({
 
       {clock.weeksOver && <WeeksOverNotice lastDay={clock.lastDay} />}
 
+      {closingBlock && (
+        <BlockClosingNotice
+          block={closingBlock}
+          emptyDays={blockEmptyDays}
+          daysLeft={daysUntilBlockCloses(closingBlock, clock.today) ?? 0}
+        />
+      )}
+
       <DayStrip
         week={stripWeek}
         weekNo={weekNo}
@@ -198,15 +262,21 @@ export default async function TodayPage({
         today={clock.today}
         current={entryDate}
         filled={filledDates}
+        blockClosed={
+          clock.closed || (block ? blockIsClosed(block, clock.today) : false)
+        }
       />
 
       {/* ---- days left behind ----
           Shown only on today's screen, and only about days already past.
           Today is never counted as missed: the day is not over, and telling
           someone they have missed a day they are looking at would be wrong.
-          Because any day stays open until the competition is closed, this is an
-          invitation to go back rather than a reprimand. */}
-      {isLanding && missed.count > 0 && (
+          Because a day stays open until its own block closes, this is an
+          invitation to go back rather than a reprimand — and a deadline. */}
+      {/* Not while a block deadline is on screen: that banner is the same
+          message with a date attached, and two amber boxes saying "you are
+          behind" is one more than anybody reads. */}
+      {isLanding && !closingBlock && missed.count > 0 && (
         <Alert>
           <CalendarClock className="size-4" />
           <AlertTitle>
@@ -219,8 +289,8 @@ export default async function TodayPage({
               {missed.lastMissed
                 ? `You have nothing recorded for ${formatIsoDateLong(missed.lastMissed)}${
                     missed.count > 1 ? ", and earlier days too" : ""
-                  }. Those days score 0% until you fill them in, and you can still do that until the organisers close the challenge.`
-                : "Those days score 0% until you fill them in, and you can still do that until the organisers close the challenge."}
+                  }. Those days score 0% until you fill them in, and each block of four weeks closes for good a week after it ends.`
+                : "Those days score 0% until you fill them in, and each block of four weeks closes for good a week after it ends."}
             </p>
             <div className="flex flex-wrap gap-2">
               {missed.lastMissed && (
@@ -243,10 +313,10 @@ export default async function TodayPage({
         status={entry?.status ?? "draft"}
         allowed={permission.allowed}
         message={
-          permission.allowed
-            ? undefined
-            : refusalMessage(permission.reason!, settings)
+          permission.allowed ? undefined : refusalMessage(permission, settings)
         }
+        lockedReason={lockedReason}
+        stillOpenUntil={stillOpenUntil}
         weeksOver={clock.weeksOver}
         alreadySubmitted={alreadySubmitted}
       />
@@ -257,13 +327,7 @@ export default async function TodayPage({
         activeChallenges={activeChallenges}
         initialValues={initialValues}
         readOnly={readOnly}
-        readOnlyReason={
-          entry?.status === "locked"
-            ? "This day is locked. Ask a BCJ organiser if it needs correcting."
-            : permission.allowed
-              ? undefined
-              : refusalMessage(permission.reason!, settings)
-        }
+        readOnlyReason={formNotice}
         alreadySubmitted={alreadySubmitted}
         weekNo={weekNo}
         isRepeatPhase={isRepeatPhase}
@@ -317,12 +381,16 @@ function SubmissionBanner({
   status,
   allowed,
   message,
+  lockedReason,
+  stillOpenUntil,
   weeksOver,
   alreadySubmitted,
 }: {
   status: string;
   allowed: boolean;
   message?: string;
+  lockedReason: string;
+  stillOpenUntil: string;
   weeksOver: boolean;
   alreadySubmitted: boolean;
 }) {
@@ -331,10 +399,7 @@ function SubmissionBanner({
       <Alert>
         <Lock className="size-4" />
         <AlertTitle>Locked</AlertTitle>
-        <AlertDescription>
-          The organisers have closed the challenge, so this day is final. Only
-          a BCJ organiser can change it now.
-        </AlertDescription>
+        <AlertDescription>{lockedReason}</AlertDescription>
       </Alert>
     );
   }
@@ -354,10 +419,7 @@ function SubmissionBanner({
       <Alert>
         <CheckCircle2 className="size-4" />
         <AlertTitle>Saved</AlertTitle>
-        <AlertDescription>
-          You can still change this day until the organisers close the
-          challenge.
-        </AlertDescription>
+        <AlertDescription>{stillOpenUntil}</AlertDescription>
       </Alert>
     );
   }
@@ -368,8 +430,8 @@ function SubmissionBanner({
       <AlertTitle>Not filled in yet</AlertTitle>
       <AlertDescription>
         {weeksOver
-          ? "A day you never fill in scores 0%. The 12 weeks are over, so fill this one in before the organisers close the challenge."
-          : "A day you never fill in scores 0%. You can come back to it any time until the organisers close the challenge."}
+          ? `A day you never fill in scores 0%. The 12 weeks are over, so fill this one in before the organisers close the challenge.`
+          : `A day you never fill in scores 0%. ${stillOpenUntil}`}
       </AlertDescription>
     </Alert>
   );

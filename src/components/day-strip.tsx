@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Lock } from "lucide-react";
 
 import { formatIsoDate, type IsoDate } from "@/lib/dates";
 import { cn } from "@/lib/utils";
@@ -20,6 +20,7 @@ export function DayStrip({
   today,
   current,
   filled,
+  blockClosed = false,
 }: {
   /** The seven dates of the week being shown, in order. */
   week: readonly IsoDate[];
@@ -30,6 +31,13 @@ export function DayStrip({
   current: IsoDate;
   /** Dates in this week that have something recorded. */
   filled: ReadonlySet<string>;
+  /**
+   * Whether this week's four-week block has passed its deadline. A closed day
+   * is shown but not offered as a link — it cannot be changed, and a tappable
+   * day that refuses on arrival is worse than one that plainly cannot be
+   * tapped.
+   */
+  blockClosed?: boolean;
 }) {
   const previousWeek = weekNo > 1 ? week[0] : null;
   const nextWeek = weekNo < totalWeeks ? week[6] : null;
@@ -45,11 +53,13 @@ export function DayStrip({
         />
 
         <div className="text-center">
-          <p className="text-sm font-medium">
+          <p className="flex items-center justify-center gap-1.5 text-sm font-medium">
+            {blockClosed && <Lock className="size-3" />}
             Week {weekNo} of {totalWeeks}
           </p>
           <p className="text-xs text-muted-foreground">
             {formatIsoDate(week[0])} – {formatIsoDate(week[6])}
+            {blockClosed && " · closed"}
           </p>
         </div>
 
@@ -65,6 +75,7 @@ export function DayStrip({
             today={today}
             current={current}
             done={filled.has(date)}
+            closed={blockClosed}
           />
         ))}
       </div>
@@ -118,11 +129,13 @@ function Day({
   today,
   current,
   done,
+  closed,
 }: {
   date: IsoDate;
   today: IsoDate;
   current: IsoDate;
   done: boolean;
+  closed: boolean;
 }) {
   const isToday = date === today;
   const isCurrent = date === current;
@@ -164,6 +177,24 @@ function Day({
       <span
         className={cn(shell, "text-muted-foreground/50")}
         aria-label={`${weekday} ${dayNumber}: not yet`}
+      >
+        {inner}
+      </span>
+    );
+  }
+
+  if (closed) {
+    return (
+      <span
+        className={cn(
+          shell,
+          "opacity-60",
+          isCurrent && "bg-secondary ring-2 ring-inset ring-border",
+        )}
+        aria-current={isCurrent ? "page" : undefined}
+        aria-label={`${weekday} ${dayNumber}: ${
+          done ? "filled in" : "nothing filled in"
+        }, closed`}
       >
         {inner}
       </span>

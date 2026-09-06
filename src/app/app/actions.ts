@@ -74,7 +74,7 @@ export async function submitDay(
   // stale page cannot write a day the competition has closed (open item O-4).
   const permission = participantMayWrite(settings, entryDate);
   if (!permission.allowed) {
-    return { ok: false, error: refusalMessage(permission.reason!, settings) };
+    return { ok: false, error: refusalMessage(permission, settings) };
   }
 
   // A locked entry is final whatever the date maths says — an organiser may

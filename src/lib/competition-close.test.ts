@@ -8,12 +8,14 @@ import type { IsoDate } from "@/lib/dates";
  * When a participant may write, now that closing is a decision rather than a
  * date.
  *
- * The rule BCJ asked for has three moving parts and they are easy to confuse:
- * the 12 weeks ending, the organisers closing the competition, and the daily
- * cutoff. Only the middle one shuts a day. The gap between the first two is
- * the grace period — the whole point of the feature — and the third no longer
- * refuses anything, because a participant locked out at 23:59 could write the
- * same date the next morning anyway.
+ * Two different deadlines can shut a day and they are easy to confuse. Each
+ * four-week block closes on its own date, a week after the block ends; the
+ * final block has no such date and waits for the organisers. The daily cutoff
+ * shuts nothing at all, because a participant locked out at 23:59 could write
+ * the same date the next morning anyway.
+ *
+ * The arithmetic of the block dates themselves lives in entry-blocks.test.ts.
+ * What is tested here is which of them wins, and what a participant is told.
  *
  * Pure date arithmetic against a settings row built here, so it needs no
  * database. `@/lib/settings` reaches for one at import time, hence the env
@@ -48,23 +50,83 @@ function noonOn(date: string): Date {
 }
 
 suite("participantMayWrite", () => {
-  it("keeps every day open after the 12 weeks, until an organiser closes it", async () => {
+  it("keeps a block open through its catch-up week and shuts it after", async () => {
+    const { participantMayWrite } = await import("@/lib/settings");
+    const row = settingsRow();
+
+    // A day in week 1. Weeks 1–4 are caught up during week 5, which runs to
+    // 23 July.
+    const week1 = "2026-06-20" as IsoDate;
+
+    // Week 5, the last day of the catch-up week: still open.
+    expect(participantMayWrite(row, week1, noonOn("2026-07-23")).allowed).toBe(
+      true,
+    );
+
+    // Week 6, the morning after: gone.
+    const shut = participantMayWrite(row, week1, noonOn("2026-07-24"));
+    expect(shut.allowed).toBe(false);
+    expect(shut.reason).toBe("block_closed");
+    expect(shut.block?.label).toBe("Weeks 1–4");
+  });
+
+  it("shuts one block without touching the next", async () => {
+    const { participantMayWrite } = await import("@/lib/settings");
+    const row = settingsRow();
+    const inWeek6 = noonOn("2026-07-27");
+
+    // Weeks 1–4 have closed; week 5, in the next block, is still open.
+    expect(
+      participantMayWrite(row, "2026-07-10" as IsoDate, inWeek6).reason,
+    ).toBe("block_closed");
+    expect(
+      participantMayWrite(row, "2026-07-20" as IsoDate, inWeek6).allowed,
+    ).toBe(true);
+  });
+
+  it("leaves the final block open after the 12 weeks, for the organisers to close", async () => {
     const { participantMayWrite } = await import("@/lib/settings");
     const row = settingsRow();
     const aFortnightLate = noonOn("2026-09-24");
 
-    // A day in week 1, being filled in two weeks after the challenge ended.
-    const week1 = participantMayWrite(row, "2026-06-20" as IsoDate, aFortnightLate);
-    expect(week1.allowed).toBe(true);
+    // Weeks 9–12 have no week 13 to be caught up in, so they stay writable
+    // until somebody closes the competition.
+    expect(participantMayWrite(row, LAST_DAY, aFortnightLate).allowed).toBe(
+      true,
+    );
+    expect(
+      participantMayWrite(row, "2026-08-14" as IsoDate, aFortnightLate).allowed,
+    ).toBe(true);
 
-    const lastDay = participantMayWrite(row, LAST_DAY, aFortnightLate);
-    expect(lastDay.allowed).toBe(true);
+    // The earlier blocks are long gone by then.
+    expect(
+      participantMayWrite(row, "2026-06-20" as IsoDate, aFortnightLate).reason,
+    ).toBe("block_closed");
+  });
+
+  it("names the block and the date it closed", async () => {
+    const { participantMayWrite, refusalMessage } = await import(
+      "@/lib/settings"
+    );
+    const row = settingsRow();
+
+    const permission = participantMayWrite(
+      row,
+      "2026-06-20" as IsoDate,
+      noonOn("2026-07-30"),
+    );
+    const message = refusalMessage(permission, row);
+    expect(message).toContain("Weeks 1–4");
+    expect(message).toContain("23 July 2026");
   });
 
   it("refuses everything once the competition is closed", async () => {
     const { participantMayWrite } = await import("@/lib/settings");
     const row = settingsRow(new Date("2026-09-20T10:00:00Z"));
 
+    // Closing the competition takes precedence over the block deadline, so a
+    // participant is told about the decision rather than a date that has
+    // nothing to do with why the day is shut.
     const permission = participantMayWrite(
       row,
       "2026-06-20" as IsoDate,
@@ -72,6 +134,13 @@ suite("participantMayWrite", () => {
     );
     expect(permission.allowed).toBe(false);
     expect(permission.reason).toBe("competition_closed");
+
+    const stillInsideAnOpenBlock = participantMayWrite(
+      row,
+      LAST_DAY,
+      noonOn("2026-09-24"),
+    );
+    expect(stillInsideAnOpenBlock.reason).toBe("competition_closed");
   });
 
   it("never lets the grace period extend the challenge itself", async () => {

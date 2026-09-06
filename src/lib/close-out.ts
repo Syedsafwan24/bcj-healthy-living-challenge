@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, eq, inArray, lt, ne } from "drizzle-orm";
+import { and, eq, gt, inArray, lt, ne } from "drizzle-orm";
 
 import { db } from "@/db";
 import { dailyEntries, participants, type Settings } from "@/db/schema";
@@ -117,15 +117,21 @@ export async function sweepMissingDays(
 }
 
 /**
- * Makes every recorded day of the challenge final.
+ * Makes every recorded day up to and including `lastDay` final.
+ *
+ * Called twice over, for two different reasons: with a four-week block's last
+ * day each time a block passes its catch-up deadline, and with the last day of
+ * the challenge when an organiser closes the competition. Blocks close in
+ * order, so locking through the newest closed block also covers every earlier
+ * one — which is what makes it safe to run on a schedule.
  *
  * `missing` rows are left as they are: their status is what marks them as
  * never filled in, and overwriting it would lose that. They are already
- * unwritable, because a closed competition refuses every date.
+ * unwritable, because a closed block refuses every date inside it.
  *
  * Returns how many rows changed, so a second run reports 0.
  */
-export async function lockAllEntries(lastDay: IsoDate): Promise<number> {
+export async function lockEntriesThrough(lastDay: IsoDate): Promise<number> {
   const locked = await db
     .update(dailyEntries)
     .set({ status: "locked" })
@@ -147,12 +153,25 @@ export async function lockAllEntries(lastDay: IsoDate): Promise<number> {
  * A locked day goes back to `submitted`, which is the only status it can have
  * had: locking is the one thing that writes `locked`, and it only ever touches
  * rows that were submitted.
+ *
+ * `after` is the last day of the newest block that closed on its own deadline.
+ * Days on or before it stay locked, because reopening the competition does not
+ * reopen weeks 1–4 — those closed at the end of their catch-up week and that
+ * decision was never the organiser's to undo here. Pass null to unlock
+ * everything.
  */
-export async function unlockAllEntries(): Promise<number> {
+export async function unlockEntriesAfter(after: IsoDate | null): Promise<number> {
   const unlocked = await db
     .update(dailyEntries)
     .set({ status: "submitted" })
-    .where(eq(dailyEntries.status, "locked"))
+    .where(
+      after === null
+        ? eq(dailyEntries.status, "locked")
+        : and(
+            eq(dailyEntries.status, "locked"),
+            gt(dailyEntries.entryDate, after),
+          ),
+    )
     .returning({ id: dailyEntries.id });
 
   return unlocked.length;

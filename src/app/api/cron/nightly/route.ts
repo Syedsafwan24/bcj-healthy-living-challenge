@@ -3,8 +3,9 @@ import { NextResponse, type NextRequest } from "next/server";
 import { recordAudit } from "@/lib/audit";
 import { pruneExpiredSessions } from "@/lib/auth/session";
 import { pruneRateLimits } from "@/lib/auth/rate-limit";
-import { lockAllEntries, sweepMissingDays } from "@/lib/close-out";
+import { lockEntriesThrough, sweepMissingDays } from "@/lib/close-out";
 import { addDays, daysBetween, type IsoDate } from "@/lib/dates";
+import { closedBlocks } from "@/lib/entry-blocks";
 import { env } from "@/lib/env";
 import { competitionClock, getSettings } from "@/lib/settings";
 
@@ -16,7 +17,8 @@ import { competitionClock, getSettings } from "@/lib/settings";
  *   1. For each active participant with no submitted entry for a past
  *      scorable date, insert a `missing` entry with null inputs.
  *   2. Score those days at 0%, if `missing_scores_zero` is true.
- *   3. Lock every entry once an organiser has closed the competition.
+ *   3. Lock each four-week block once its catch-up week has ended, and every
+ *      entry once an organiser has closed the competition.
  *   4. Recompute the affected weekly and final scores.
  *
  * Alert if this job fails. A silent failure means missing days are never
@@ -31,6 +33,8 @@ interface JobResult {
   today: IsoDate;
   markedMissing: number;
   locked: number;
+  /** Blocks past their catch-up deadline, for the log. */
+  blocksClosed: string[];
   participantsTouched: number;
   weeksRecomputed: number;
   sessionsPruned: number;
@@ -46,6 +50,7 @@ async function runNightly(): Promise<JobResult> {
     today: clock.today,
     markedMissing: 0,
     locked: 0,
+    blocksClosed: [],
     participantsTouched: 0,
     weeksRecomputed: 0,
     sessionsPruned: 0,
@@ -96,20 +101,35 @@ async function runNightly(): Promise<JobResult> {
     });
   }
 
-  /* ---- 3: lock every entry once an organiser has closed the competition ---- */
+  /* ---- 3: lock each block as its deadline passes ---- */
 
-  // Not when the 12 weeks end. Days stay open past the last week so anyone
-  // behind can still fill them in, and BCJ decides when that grace period is
-  // over (see participantMayWrite). Until then there is nothing to lock.
-  if (clock.closed) {
-    base.locked = await lockAllEntries(clock.lastDay);
+  // Weeks 1–4 close at the end of week 5, weeks 5–8 at the end of week 9, and
+  // the final block waits for an organiser (see lib/entry-blocks.ts). Blocks
+  // close in order, so locking through the newest closed one covers every
+  // earlier block too — which is what makes this safe to run every night.
+  const finished = closedBlocks(
+    settings.startDate as IsoDate,
+    settings.totalWeeks,
+    clock.today,
+  );
+  const newestClosed = finished.at(-1) ?? null;
+
+  // Closing the competition locks the lot, including the final block that has
+  // no deadline of its own.
+  const lockThrough = clock.closed ? clock.lastDay : newestClosed?.lastDay;
+
+  if (lockThrough) {
+    base.locked = await lockEntriesThrough(lockThrough);
+    base.blocksClosed = finished.map((block) => block.label);
 
     if (base.locked > 0) {
       await recordAudit({
         action: "entry.locked",
         entityType: "daily_entry",
-        newValue: `${base.locked} entries locked after ${clock.lastDay}`,
-        reason: "Nightly job: the competition is closed, so days are now final",
+        newValue: `${base.locked} entries locked through ${lockThrough}`,
+        reason: clock.closed
+          ? "Nightly job: the competition is closed, so days are now final"
+          : `Nightly job: ${newestClosed?.label} passed the end of the catch-up week`,
         ip: null,
       });
     }

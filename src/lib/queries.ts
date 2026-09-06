@@ -608,6 +608,45 @@ export { desc };
  * row is one the nightly job wrote for a day nobody filled in, so it counts
  * as missed just as an absent row does.
  */
+/**
+ * Days in a date range with nothing recorded, counting only days that have
+ * happened.
+ *
+ * Used for the four-week block deadlines: during a catch-up week a participant
+ * needs to know how many days are still empty *in the block that is about to
+ * close*, which is a different number from how many are empty overall.
+ *
+ * A `missing` row counts as empty, exactly as an absent row does — it is what
+ * the nightly job writes for a day nobody filled in.
+ */
+export async function countEmptyDaysInRange(
+  participantId: string,
+  from: IsoDate,
+  to: IsoDate,
+  today: IsoDate,
+): Promise<number> {
+  // Never counts today: the day is not over, so it is not yet missed.
+  const yesterday = addDays(today, -1);
+  const through = yesterday < to ? yesterday : to;
+
+  const elapsed = daysBetween(from, through) + 1;
+  if (elapsed <= 0) return 0;
+
+  const [row] = await db
+    .select({ recorded: count() })
+    .from(dailyEntries)
+    .where(
+      and(
+        eq(dailyEntries.participantId, participantId),
+        ne(dailyEntries.status, "missing"),
+        gte(dailyEntries.entryDate, from),
+        lte(dailyEntries.entryDate, through),
+      ),
+    );
+
+  return Math.max(0, elapsed - Number(row?.recorded ?? 0));
+}
+
 export async function getMissedDays(
   settings: Settings,
   participantId: string,

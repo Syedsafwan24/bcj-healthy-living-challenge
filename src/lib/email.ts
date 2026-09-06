@@ -380,23 +380,55 @@ export async function sendDailyReminder(params: {
   firstName: string;
   weekNo: number;
   emptyDays: number;
+  /**
+   * Set only during a four-week block's catch-up week. Those days stop being
+   * fixable the moment the deadline passes, so this is the one reminder that
+   * has a cost attached to ignoring it — and it leads the message rather than
+   * trailing it.
+   */
+  deadline?: {
+    /** "Weeks 1–4". */
+    label: string;
+    /** Formatted date the block closes after. */
+    closesOn: string;
+    /** Empty days inside that block, for this participant. */
+    emptyDays: number;
+    daysLeft: number;
+  };
 }) {
   const url = `${env.appUrl}/app`;
+  const historyUrl = `${env.appUrl}/app/history`;
   const settingsUrl = `${env.appUrl}/app/profile`;
 
+  const deadline = params.deadline;
+  const chasing = deadline !== undefined && deadline.emptyDays > 0;
+
+  const warning = chasing
+    ? `${deadline.label} close after ${deadline.closesOn} — ${deadline.daysLeft} day${
+        deadline.daysLeft === 1 ? "" : "s"
+      } left. You have ${deadline.emptyDays} empty day${
+        deadline.emptyDays === 1 ? "" : "s"
+      } in ${deadline.label.toLowerCase()}, and after that date each one scores 0% for good.`
+    : "";
+
   const behind =
-    params.emptyDays > 0
+    !chasing && params.emptyDays > 0
       ? `You also have ${params.emptyDays} earlier day${
           params.emptyDays === 1 ? "" : "s"
-        } still empty. You can fill in any day until the organisers close the challenge.`
+        } still empty. Each four-week block closes for good a week after it ends.`
       : "";
+
+  const subject = chasing
+    ? `${deadline.label} close after ${deadline.closesOn} — BCJ Healthy Living`
+    : `Fill in today — BCJ Healthy Living, week ${params.weekNo}`;
 
   return send({
     to: params.to,
-    subject: `Fill in today — BCJ Healthy Living, week ${params.weekNo}`,
+    subject,
     text: [
       `As-salamu alaykum ${params.firstName},`,
       "",
+      ...(warning ? [warning, historyUrl, ""] : []),
       `You have not filled in today yet. It takes under a minute.`,
       url,
       ...(behind ? ["", behind] : []),
@@ -405,8 +437,18 @@ export async function sendDailyReminder(params: {
     ].join("\n"),
     html: layout(
       `As-salamu alaykum ${escapeHtml(params.firstName)}`,
-      `<p style="margin:0 0 20px;font-size:15px;line-height:1.6">You have not filled in today yet — week ${params.weekNo} of the challenge. It takes under a minute.</p>
-       <p style="margin:0 0 20px"><a href="${url}" style="background:${ACCENT};color:#ffffff;text-decoration:none;padding:12px 20px;border-radius:10px;display:inline-block;font-weight:600">Fill in today</a></p>
+      `${
+        warning
+          ? `<p style="margin:0 0 20px;padding:14px 16px;background:#FFF7E6;border-left:4px solid #E0A100;border-radius:8px;font-size:15px;line-height:1.6">${escapeHtml(warning)}</p>
+       <p style="margin:0 0 20px"><a href="${historyUrl}" style="background:${ACCENT};color:#ffffff;text-decoration:none;padding:12px 20px;border-radius:10px;display:inline-block;font-weight:600">Find my empty days</a></p>`
+          : ""
+      }
+       <p style="margin:0 0 20px;font-size:15px;line-height:1.6">You have not filled in today yet — week ${params.weekNo} of the challenge. It takes under a minute.</p>
+       <p style="margin:0 0 20px"><a href="${url}" style="${
+         warning
+           ? `color:${ACCENT};font-weight:600`
+           : `background:${ACCENT};color:#ffffff;text-decoration:none;padding:12px 20px;border-radius:10px;display:inline-block;font-weight:600`
+       }">Fill in today</a></p>
        ${
          behind
            ? `<p style="margin:0 0 20px;font-size:15px;line-height:1.6">${escapeHtml(behind)}</p>`

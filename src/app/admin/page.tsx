@@ -43,7 +43,7 @@ export default async function AdminOverviewPage() {
               : clock.closed
                 ? `Closed. The last scorable day was ${formatIsoDateLong(clock.lastDay)}.`
                 : clock.weeksOver
-                  ? `The 12 weeks ended on ${formatIsoDateLong(clock.lastDay)}. Days are still open until you close it.`
+                  ? `The 12 weeks ended on ${formatIsoDateLong(clock.lastDay)}. The final block is still open until you close it.`
                   : `Week ${clock.currentWeek} of ${settings.totalWeeks} · ${formatIsoDateLong(clock.today)}`}
           </p>
         </div>
