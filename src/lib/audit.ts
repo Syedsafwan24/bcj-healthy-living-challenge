@@ -54,6 +54,8 @@ export type AuditAction =
   | "export.generated"
   | "health.viewed"
   | "scores.recomputed"
+  | "competition.closed"
+  | "competition.reopened"
   | "competition.reset";
 
 export interface AuditInput {

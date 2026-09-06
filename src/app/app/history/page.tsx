@@ -3,6 +3,7 @@ import { Lock } from "lucide-react";
 import type { Metadata } from "next";
 
 import { Button } from "@/components/ui/button";
+import { WeeksOverNotice } from "@/components/weeks-over-notice";
 import { requireParticipant } from "@/lib/auth/guards";
 import { datesInWeek, formatIsoDateLong, type IsoDate } from "@/lib/dates";
 import { getEntriesBetween, getWeeklyScores } from "@/lib/queries";
@@ -59,6 +60,10 @@ export default async function HistoryPage() {
           Tap any day to fill it in or change it.
         </p>
       </header>
+
+      {clock.weeksOver && !clock.closed && (
+        <WeeksOverNotice lastDay={clock.lastDay} />
+      )}
 
       {emptySoFar.length > 0 && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-500/40 bg-amber-50/60 p-4 dark:bg-amber-950/20">
@@ -135,9 +140,9 @@ export default async function HistoryPage() {
       </div>
 
       <p className="text-sm leading-relaxed text-muted-foreground">
-        You can fill in or change any day of the challenge until the last day of
-        week 12. After that a BCJ organiser can still correct a day for you, and
-        every change is recorded.
+        {clock.closed
+          ? "The organisers have closed the challenge, so these days are final. A BCJ organiser can still correct one for you, and every change is recorded."
+          : "You can fill in or change any day of the challenge until the organisers close it — which is after the 12 weeks end, so nobody who fell behind is shut out. After that a BCJ organiser can still correct a day for you, and every change is recorded."}
       </p>
     </div>
   );

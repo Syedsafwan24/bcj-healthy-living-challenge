@@ -62,7 +62,10 @@ async function runReminder(): Promise<ReminderResult> {
     pushRemoved: 0,
   };
 
-  if (!clock.started || clock.finished) {
+  // Nothing after the last day of week 12. Days stay open into the grace
+  // period before an organiser closes the competition, but a nudge to fill in
+  // "today" makes no sense once there are no more days to fill in.
+  if (!clock.started || clock.weeksOver) {
     return { ...base, message: "The challenge is not running." };
   }
 

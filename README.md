@@ -266,13 +266,43 @@ src/
 
 ---
 
+## Closing the competition
+
+The 12 weeks ending and the competition closing are two different things.
+
+A participant may fill in or change **any** day of the challenge, not only a
+recent one — someone who registers in week 5, or who falls behind, can go back
+and complete earlier weeks. That does not stop on the last day of week 12.
+Days stay open until an organiser presses **Close the competition** on
+`/admin/settings`, so BCJ chooses how long the stragglers get rather than the
+calendar choosing for them. In the meantime participants see a notice saying
+the weeks are over and that closing is the organisers' decision.
+
+Closing does three things at once, and they are the same three the nightly job
+would do: it records `settings.closed_at`, writes a `missing` row scoring 0%
+for every day nobody filled in, and locks every recorded day. After that no
+participant can write anything, and the results and exports are final.
+
+Closing needs no re-authentication, on the same reasoning as locking the
+scoring rules — it only ever makes the competition stricter. **Reopening asks
+for the organiser's password and authenticator code**, unlocks every day again,
+and is recorded in the audit history, as `competition.closed` and
+`competition.reopened`.
+
+The daily submission cutoff no longer refuses a participant write. Enforcing it
+would have been theatre: somebody locked out at 23:59 could write the same date
+as a past day the next morning. It still bounds the nightly job, which is the
+only place it decides anything.
+
+---
+
 ## The nightly job
 
 One run per day after the cutoff, in the settings timezone. It inserts a
 `missing` entry for every active participant with no record for a past scorable
 date, scores those days at 0% when `missing_scores_zero` is true, locks every
-entry once the 12 weeks have ended, and recomputes the affected weekly and
-final scores.
+entry once an organiser has closed the competition, and recomputes the affected
+weekly and final scores.
 
 `vercel.json` schedules it at 21:05 UTC, which is 00:05 in Asia/Riyadh. Adjust
 that if the timezone or the cutoff changes.

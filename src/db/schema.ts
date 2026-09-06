@@ -64,8 +64,8 @@ export const settings = pgTable(
     submissionCutoff: time("submission_cutoff").notNull().default("23:59"),
     /** Open item O-4. Days a participant may correct their own record. */
     // Retained but no longer read. BCJ's rule is that a participant may fill
-    // in or correct any day until the last day of week 12, so there is no
-    // rolling window — see participantMayWrite in lib/settings.ts.
+    // in or correct any day until an organiser closes the competition, so
+    // there is no rolling window — see participantMayWrite in lib/settings.ts.
     correctionDays: integer("correction_days").notNull().default(3),
     /** Open item O-3. A missing submission scores 0%. */
     missingScoresZero: boolean("missing_scores_zero").notNull().default(true),
@@ -75,6 +75,16 @@ export const settings = pgTable(
      * become read-only.
      */
     rulesLocked: boolean("rules_locked").notNull().default(false),
+    /**
+     * When an organiser declared the competition over. Null while it is open.
+     *
+     * The 12 weeks ending is not the same as the competition closing. Days
+     * stay open to the participants after the last week so anyone behind can
+     * fill in what they missed, and only this closes them — see
+     * participantMayWrite in lib/settings.ts. It is a timestamp rather than a
+     * flag so the results can say when the book was shut.
+     */
+    closedAt: timestamp("closed_at", { withTimezone: true }),
   },
   (t) => [check("settings_single_row", sql`${t.id} = 1`)],
 );

@@ -70,15 +70,15 @@ export async function submitDay(
   const values = parsed.data;
   const entryDate = values.entryDate as IsoDate;
 
-  // The submission deadline and the correction window are enforced here, on
-  // the server. A stale page cannot write outside them (open item O-4).
+  // Whether the day is writable at all is decided here, on the server, so a
+  // stale page cannot write a day the competition has closed (open item O-4).
   const permission = participantMayWrite(settings, entryDate);
   if (!permission.allowed) {
     return { ok: false, error: refusalMessage(permission.reason!, settings) };
   }
 
-  // A locked entry is past the correction window whatever the date maths
-  // says, for example because the nightly job locked it early.
+  // A locked entry is final whatever the date maths says — an organiser may
+  // have closed the competition since this page was loaded.
   const [existing] = await db
     .select()
     .from(dailyEntries)
@@ -129,7 +129,7 @@ export async function submitDay(
         entityType: "daily_entry",
         entityId: saved.entryId,
         actorParticipantId: session.participantId,
-        reason: "Self-correction inside the correction window",
+        reason: "Self-correction while the competition was open",
         ip,
       },
       {

@@ -388,7 +388,7 @@ export async function sendDailyReminder(params: {
     params.emptyDays > 0
       ? `You also have ${params.emptyDays} earlier day${
           params.emptyDays === 1 ? "" : "s"
-        } still empty. You can fill in any day until the challenge ends.`
+        } still empty. You can fill in any day until the organisers close the challenge.`
       : "";
 
   return send({

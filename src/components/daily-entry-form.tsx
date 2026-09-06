@@ -260,8 +260,8 @@ export function DailyEntryForm({
             {saved.dailyPoints} / {saved.maxPoints} points
           </p>
           <p className="mt-1 text-sm text-muted-foreground">
-            {saved.dailyPercentage.toFixed(1)}% for this day. You can change it
-            any time before the challenge ends.
+            {saved.dailyPercentage.toFixed(1)}% for this day. You can change
+            it any time until the organisers close the challenge.
           </p>
           <div className="mt-4 flex flex-wrap justify-center gap-2">
             <Button asChild size="sm" variant="outline" className="h-11">
@@ -357,7 +357,9 @@ export function DailyEntryForm({
       {!readOnly && (
         <div className="sticky bottom-20 z-30 -mx-5 border-t bg-background/95 px-5 py-4 backdrop-blur md:bottom-0">
           <div className="flex items-center justify-between gap-4 pb-3">
-            <span className="text-sm text-muted-foreground">Today&apos;s score</span>
+            <span className="text-sm text-muted-foreground">
+              Score for this day
+            </span>
             <span className="tabular text-lg font-semibold">
               {preview.dailyPoints} / {preview.maxPoints} ·{" "}
               {preview.dailyPercentage.toFixed(1)}%

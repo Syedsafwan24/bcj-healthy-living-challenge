@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 
 import { DailyEntryForm, EMPTY_FORM, type DailyFormValues } from "@/components/daily-entry-form";
 import { DayStrip } from "@/components/day-strip";
+import { WeeksOverNotice } from "@/components/weeks-over-notice";
 import type { TriState } from "@/components/entry-controls";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -63,20 +64,28 @@ export default async function TodayPage({
     );
   }
 
-  if (clock.finished) {
+  // Only the organisers closing it ends the challenge. Between the last day
+  // of week 12 and that decision the days stay open, so anyone behind can fill
+  // in what they missed — see participantMayWrite.
+  if (clock.closed) {
     return (
       <NotRunning
-        title="The challenge has finished"
-        body={`The last scorable day was ${formatIsoDateLong(clock.lastDay)}. Your final score is on the progress page.`}
+        title="The challenge is closed"
+        body={`The last scorable day was ${formatIsoDateLong(clock.lastDay)}, and the organisers have made the results final. Your final score is on the progress page.`}
         cta={{ href: "/app/progress", label: "See my final score" }}
       />
     );
   }
 
+  // The day this screen opens on with no date asked for. Once the 12 weeks are
+  // over there is no "today" inside the challenge, so it lands on the last day
+  // rather than on a date the competition never covered.
+  const landingDate = clock.weeksOver ? clock.lastDay : clock.today;
+
   // A participant may open an earlier day from the history screen. The date
   // is validated against the competition window and the correction rules
   // below, so an arbitrary query string cannot open a locked day.
-  const entryDate = (params.date ?? clock.today) as IsoDate;
+  const entryDate = (params.date ?? landingDate) as IsoDate;
   const permission = participantMayWrite(settings, entryDate);
   // Derived from the entry's own date, never from today (section 4.2).
   const weekNo = weekNoFor(clock.firstDay, entryDate);
@@ -131,6 +140,9 @@ export default async function TodayPage({
 
   const thisWeek = weekly.find((w) => w.weekNo === weekNo);
   const isToday = entryDate === clock.today;
+  // Whether this is the screen a participant arrives on. During the 12 weeks
+  // that is today; afterwards it is the last day of the challenge.
+  const isLanding = entryDate === landingDate;
 
   // The name people actually go by. Falls back to the display name, and then
   // to nothing at all rather than greeting somebody as "undefined".
@@ -145,7 +157,7 @@ export default async function TodayPage({
           <Badge variant="secondary" className="rounded-full">
             Week {weekNo} of {settings.totalWeeks}
           </Badge>
-          {!isToday && (
+          {!isToday && !clock.weeksOver && (
             <Badge variant="outline" className="rounded-full">
               Earlier day
             </Badge>
@@ -167,13 +179,17 @@ export default async function TodayPage({
               </p>
             )}
           </div>
-          {!isToday && (
+          {!isLanding && (
             <Button asChild variant="outline" size="sm" className="h-11">
-              <Link href="/app">Back to today</Link>
+              <Link href="/app">
+                {clock.weeksOver ? "Back to the last day" : "Back to today"}
+              </Link>
             </Button>
           )}
         </div>
       </header>
+
+      {clock.weeksOver && <WeeksOverNotice lastDay={clock.lastDay} />}
 
       <DayStrip
         week={stripWeek}
@@ -188,9 +204,9 @@ export default async function TodayPage({
           Shown only on today's screen, and only about days already past.
           Today is never counted as missed: the day is not over, and telling
           someone they have missed a day they are looking at would be wrong.
-          Because any day stays open until the challenge ends, this is an
+          Because any day stays open until the competition is closed, this is an
           invitation to go back rather than a reprimand. */}
-      {isToday && missed.count > 0 && (
+      {isLanding && missed.count > 0 && (
         <Alert>
           <CalendarClock className="size-4" />
           <AlertTitle>
@@ -203,8 +219,8 @@ export default async function TodayPage({
               {missed.lastMissed
                 ? `You have nothing recorded for ${formatIsoDateLong(missed.lastMissed)}${
                     missed.count > 1 ? ", and earlier days too" : ""
-                  }. Those days score 0% until you fill them in, and you can still do that any time before the challenge ends.`
-                : "Those days score 0% until you fill them in, and you can still do that any time before the challenge ends."}
+                  }. Those days score 0% until you fill them in, and you can still do that until the organisers close the challenge.`
+                : "Those days score 0% until you fill them in, and you can still do that until the organisers close the challenge."}
             </p>
             <div className="flex flex-wrap gap-2">
               {missed.lastMissed && (
@@ -231,7 +247,7 @@ export default async function TodayPage({
             ? undefined
             : refusalMessage(permission.reason!, settings)
         }
-        correctionClosesAfter={permission.correctionClosesAfter}
+        weeksOver={clock.weeksOver}
         alreadySubmitted={alreadySubmitted}
       />
 
@@ -301,13 +317,13 @@ function SubmissionBanner({
   status,
   allowed,
   message,
-  correctionClosesAfter,
+  weeksOver,
   alreadySubmitted,
 }: {
   status: string;
   allowed: boolean;
   message?: string;
-  correctionClosesAfter?: IsoDate;
+  weeksOver: boolean;
   alreadySubmitted: boolean;
 }) {
   if (status === "locked") {
@@ -316,8 +332,8 @@ function SubmissionBanner({
         <Lock className="size-4" />
         <AlertTitle>Locked</AlertTitle>
         <AlertDescription>
-          The 12 weeks are over, so this day is now final. Only a BCJ organiser
-          can change it.
+          The organisers have closed the challenge, so this day is final. Only
+          a BCJ organiser can change it now.
         </AlertDescription>
       </Alert>
     );
@@ -339,11 +355,8 @@ function SubmissionBanner({
         <CheckCircle2 className="size-4" />
         <AlertTitle>Saved</AlertTitle>
         <AlertDescription>
-          You can still change this day until the end of the challenge on{" "}
-          {correctionClosesAfter
-            ? formatIsoDateLong(correctionClosesAfter)
-            : "the last day of week 12"}
-          .
+          You can still change this day until the organisers close the
+          challenge.
         </AlertDescription>
       </Alert>
     );
@@ -354,8 +367,9 @@ function SubmissionBanner({
       <Clock className="size-4" />
       <AlertTitle>Not filled in yet</AlertTitle>
       <AlertDescription>
-        A day you never fill in scores 0%. You can come back to it any time
-        before the challenge ends.
+        {weeksOver
+          ? "A day you never fill in scores 0%. The 12 weeks are over, so fill this one in before the organisers close the challenge."
+          : "A day you never fill in scores 0%. You can come back to it any time until the organisers close the challenge."}
       </AlertDescription>
     </Alert>
   );

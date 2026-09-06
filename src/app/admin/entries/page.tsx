@@ -47,7 +47,7 @@ export default async function EntriesPage({
   const entryDate: IsoDate =
     requested && isIsoDate(requested)
       ? requested
-      : clock.finished
+      : clock.weeksOver
         ? clock.lastDay
         : clock.started
           ? clock.today

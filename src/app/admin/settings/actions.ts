@@ -17,8 +17,14 @@ import { verifyReauth } from "@/lib/auth/admin-auth";
 import { requireAdmin } from "@/lib/auth/guards";
 import { requestIp } from "@/lib/auth/session";
 import { CHALLENGES } from "@/lib/challenges";
+import {
+  lockAllEntries,
+  sweepMissingDays,
+  unlockAllEntries,
+} from "@/lib/close-out";
+import { daysBetween, formatIsoDateLong, type IsoDate } from "@/lib/dates";
 import { recomputeAll } from "@/lib/scoring-save";
-import { getSettings } from "@/lib/settings";
+import { competitionClock, getSettings } from "@/lib/settings";
 import { fieldErrors, reauthSchema, settingsSchema } from "@/lib/validation";
 import { RESET_PHRASE } from "./constants";
 
@@ -252,6 +258,177 @@ export async function unlockRules(
 }
 
 /* ------------------------------------------------------------------ */
+/* Closing the competition                                             */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Declares the competition over.
+ *
+ * This is the deadline, not the end of week 12. The 12 weeks ending stops
+ * anyone earning anything new, but the days stay writable afterwards so
+ * participants who fell behind can go back and fill in what they missed. BCJ
+ * decides how long that grace period runs, and this button ends it.
+ *
+ * Closing does three things, in this order, so the results are final the
+ * moment the button is pressed rather than at the next cron run:
+ *
+ *   1. Records the closing time, which is what refuses every later write.
+ *   2. Writes a `missing` row for every day nobody filled in, scoring it at
+ *      0%, and rolls the weekly and final scores up. This is the same sweep
+ *      the nightly job runs, so nothing is scored differently for having been
+ *      closed by hand.
+ *   3. Locks every recorded day, so even an organiser has to correct one
+ *      deliberately and leave a trail.
+ *
+ * No re-authentication, on the same reasoning as locking the scoring rules:
+ * it only ever makes the competition stricter, and it can be reopened — which
+ * does ask for a password.
+ */
+export async function closeCompetition(
+  _prev: SettingsState | null,
+  formData: FormData,
+): Promise<SettingsState> {
+  const admin = await requireAdmin();
+  const before = await getSettings();
+  const clock = competitionClock(before);
+
+  if (clock.closed) {
+    return { ok: false, error: "The competition is already closed." };
+  }
+  if (!clock.started) {
+    return {
+      ok: false,
+      error: `The challenge has not started yet. It begins on ${formatIsoDateLong(clock.firstDay)}.`,
+    };
+  }
+
+  const closedAt = new Date();
+  await db.update(settings).set({ closedAt }).where(eq(settings.id, 1));
+
+  // Everything up to today, or the last day of week 12 if that came first.
+  // Closing early must not score days that have not happened.
+  const through: IsoDate =
+    daysBetween(clock.today, clock.lastDay) < 0 ? clock.lastDay : clock.today;
+
+  const after = await getSettings();
+  const sweep = await sweepMissingDays(after, through);
+  const locked = await lockAllEntries(clock.lastDay);
+
+  const ip = await requestIp();
+  await recordAudit({
+    action: "competition.closed",
+    entityType: "settings",
+    actorAdminId: admin.adminId,
+    oldValue: "open",
+    newValue: `closed ${closedAt.toISOString()}; ${sweep.marked} days marked missing; ${locked} entries locked`,
+    reason:
+      String(formData.get("reason") ?? "").trim() ||
+      (clock.weeksOver
+        ? "The 12 weeks are over and the grace period has ended"
+        : "Closed before the end of week 12"),
+    ip,
+  });
+
+  revalidatePath("/admin", "layout");
+  revalidatePath("/app", "layout");
+
+  return {
+    ok: true,
+    message:
+      "The competition is closed. " +
+      (sweep.marked > 0
+        ? `${sweep.marked} unrecorded day${sweep.marked === 1 ? "" : "s"} scored 0%, and `
+        : "") +
+      `${locked} day${locked === 1 ? " is" : "s are"} now final. Participants can no longer change anything.`,
+  };
+}
+
+/**
+ * Reopens a competition closed by mistake.
+ *
+ * The mirror of unlocking the scoring rules: this loosens the competition, so
+ * section 2.3 applies and the password and authenticator code are asked for
+ * again regardless of an active session.
+ *
+ * Locked days go back to `submitted`. Days the close scored 0% keep their
+ * `missing` status — that is the record of a day nobody filled in, and it is
+ * overwritten the moment the participant fills it in.
+ */
+export async function reopenCompetition(
+  _prev: SettingsState | null,
+  formData: FormData,
+): Promise<SettingsState> {
+  const admin = await requireAdmin();
+  const before = await getSettings();
+
+  if (before.closedAt === null) {
+    return { ok: false, error: "The competition is not closed." };
+  }
+
+  const parsed = reauthSchema.safeParse({
+    password: formData.get("password"),
+    totp: formData.get("totp"),
+  });
+  if (!parsed.success) {
+    return { ok: false, errors: fieldErrors(parsed.error) };
+  }
+
+  const verified = await verifyReauth(
+    admin.adminId,
+    parsed.data.password,
+    parsed.data.totp,
+  );
+  const ip = await requestIp();
+
+  if (!verified) {
+    await recordAudit({
+      action: "admin.login_failed",
+      entityType: "admin",
+      entityId: admin.adminId,
+      actorAdminId: admin.adminId,
+      reason: "Re-authentication failed while reopening the competition",
+      ip,
+    });
+    return {
+      ok: false,
+      error: "Those details were not accepted. The competition is still closed.",
+    };
+  }
+
+  await recordAudit({
+    action: "admin.reauthenticated",
+    entityType: "admin",
+    entityId: admin.adminId,
+    actorAdminId: admin.adminId,
+    reason: "Reopening the competition",
+    ip,
+  });
+
+  await db.update(settings).set({ closedAt: null }).where(eq(settings.id, 1));
+  const unlocked = await unlockAllEntries();
+
+  await recordAudit({
+    action: "competition.reopened",
+    entityType: "settings",
+    actorAdminId: admin.adminId,
+    oldValue: before.closedAt.toISOString(),
+    newValue: `open; ${unlocked} entries unlocked`,
+    reason:
+      String(formData.get("reason") ?? "").trim() ||
+      "Reopened by an organiser",
+    ip,
+  });
+
+  revalidatePath("/admin", "layout");
+  revalidatePath("/app", "layout");
+
+  return {
+    ok: true,
+    message: `The competition is open again and ${unlocked} day${unlocked === 1 ? "" : "s"} can be changed. Close it again once the correction is made.`,
+  };
+}
+
+/* ------------------------------------------------------------------ */
 /* End of season — clearing the competition for the next year          */
 /* ------------------------------------------------------------------ */
 
@@ -363,8 +540,13 @@ export async function resetCompetition(
     // Next year starts at BCJ0001 again.
     await tx.execute(sql`SELECT setval('participant_seq', 1, false)`);
 
-    // The next thing anyone does is set next year's start date.
-    await tx.update(settings).set({ rulesLocked: false }).where(eq(settings.id, 1));
+    // The next thing anyone does is set next year's start date, and next
+    // year's competition has to start open rather than inheriting the closure
+    // that ended the last one.
+    await tx
+      .update(settings)
+      .set({ rulesLocked: false, closedAt: null })
+      .where(eq(settings.id, 1));
   });
 
   await recordAudit({
@@ -372,7 +554,8 @@ export async function resetCompetition(
     entityType: "settings",
     actorAdminId: admin.adminId,
     oldValue: `${people.value} participants, ${entries.value} daily entries, ${weeks.value} weekly scores, ${finals.value} final scores`,
-    newValue: "cleared; registration numbering reset to 1; scoring rules unlocked",
+    newValue:
+      "cleared; registration numbering reset to 1; scoring rules unlocked; competition reopened",
     reason: String(formData.get("reason") ?? "").trim() || "End of season reset",
     ip,
   });

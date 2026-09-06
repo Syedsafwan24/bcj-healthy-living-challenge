@@ -38,11 +38,13 @@ export default async function AdminOverviewPage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Overview</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {clock.started
-              ? clock.finished
-                ? `The challenge finished on ${formatIsoDateLong(clock.lastDay)}.`
-                : `Week ${clock.currentWeek} of ${settings.totalWeeks} · ${formatIsoDateLong(clock.today)}`
-              : `Starts ${formatIsoDateLong(clock.firstDay)}`}
+            {!clock.started
+              ? `Starts ${formatIsoDateLong(clock.firstDay)}`
+              : clock.closed
+                ? `Closed. The last scorable day was ${formatIsoDateLong(clock.lastDay)}.`
+                : clock.weeksOver
+                  ? `The 12 weeks ended on ${formatIsoDateLong(clock.lastDay)}. Days are still open until you close it.`
+                  : `Week ${clock.currentWeek} of ${settings.totalWeeks} · ${formatIsoDateLong(clock.today)}`}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -91,7 +93,7 @@ export default async function AdminOverviewPage() {
           label="Logged today"
           value={submittedToday}
           note={
-            clock.started && !clock.finished
+            clock.started && !clock.weeksOver
               ? `${outstanding} still outstanding`
               : "Outside the competition window"
           }

@@ -160,7 +160,7 @@ export default async function ProgressPage() {
         <Link href="/app/history" className="underline-offset-4 hover:underline">
           Check your history
         </Link>{" "}
-        for days still inside the correction window.
+        for any day that is still empty.
       </p>
     </div>
   );

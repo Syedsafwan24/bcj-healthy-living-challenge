@@ -79,7 +79,7 @@ export default async function ExportsPage({
             kind="daily"
             withRange
             defaultFrom={settings.startDate}
-            defaultTo={clock.finished ? lastDay : clock.today}
+            defaultTo={clock.weeksOver ? lastDay : clock.today}
             min={settings.startDate}
             max={lastDay}
           />

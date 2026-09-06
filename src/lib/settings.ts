@@ -8,7 +8,6 @@ import {
   addDays,
   daysBetween,
   isScorableDate,
-  formatTime,
   minutesIntoDayInZone,
   timeToMinutes,
   todayInZone,
@@ -53,7 +52,21 @@ export interface CompetitionClock {
   /** The competition week containing today, or null before or after it. */
   currentWeek: number | null;
   started: boolean;
-  finished: boolean;
+  /**
+   * The 12 weeks are over — today is past the last day.
+   *
+   * This is not the same as the competition being closed. Nothing new can be
+   * *earned* after this, but the days themselves stay open so anyone behind
+   * can fill in what they missed.
+   */
+  weeksOver: boolean;
+  /**
+   * An organiser has declared it over. This is what actually shuts the doors:
+   * days stop being writable and the results are final.
+   */
+  closed: boolean;
+  /** When it was closed, for anything that needs to say so. */
+  closedAt: Date | null;
   firstDay: IsoDate;
   lastDay: IsoDate;
   /** Minutes past the submission cutoff, negative while still open. */
@@ -69,8 +82,8 @@ export function competitionClock(
   const firstDay = row.startDate as IsoDate;
   const lastDay = addDays(firstDay, row.totalWeeks * 7 - 1);
   const started = daysBetween(firstDay, today) >= 0;
-  const finished = daysBetween(today, lastDay) < 0;
-  const inWindow = started && !finished;
+  const weeksOver = daysBetween(today, lastDay) < 0;
+  const inWindow = started && !weeksOver;
 
   const nowMinutes = minutesIntoDayInZone(row.timezone, now);
   const cutoffMinutes = timeToMinutes(row.submissionCutoff);
@@ -79,7 +92,9 @@ export function competitionClock(
     today,
     currentWeek: inWindow ? weekNoFor(firstDay, today) : null,
     started,
-    finished,
+    weeksOver,
+    closed: row.closedAt !== null,
+    closedAt: row.closedAt,
     firstDay,
     lastDay,
     minutesPastCutoff: nowMinutes - cutoffMinutes,
@@ -95,28 +110,33 @@ export type WriteRefusal =
   | "not_started"
   | "outside_competition"
   | "future_date"
-  | "cutoff_passed"
-  | "challenge_finished";
+  | "competition_closed";
 
 export interface WritePermission {
   allowed: boolean;
   reason?: WriteRefusal;
-  /** Last date on which this entry may still be filled in or corrected. */
-  correctionClosesAfter?: IsoDate;
+  /** The last day of week 12. Nothing later than this is ever scorable. */
+  lastScorableDay?: IsoDate;
 }
 
 /**
  * Whether a participant may write their own record for `entryDate`.
  *
  * BCJ's rule, which replaces the rolling correction window assumed under O-4:
- * every day of the challenge stays open to the participant until the challenge
- * itself ends on the last day of week 12. Someone who joins in week 5, or who
- * falls behind, can go back and fill in earlier weeks.
+ * every day of the challenge stays open to the participant until an organiser
+ * closes the competition. Someone who joins in week 5, or who falls behind,
+ * can go back and fill in earlier weeks — and the 12 weeks ending does not by
+ * itself take that away. BCJ decides when the book is shut, which gives the
+ * stragglers a grace period of whatever length the organisers think fair.
  *
- * The daily cutoff therefore only bites on that final day, where it is the one
- * real deadline. Enforcing it on any earlier day would be theatre: the
- * participant could simply return the next morning and write the same day as a
- * past date.
+ * Two things still hold regardless. A day outside the 12 weeks is never
+ * scorable, so the grace period lets people fill in the past, not extend the
+ * challenge. And a day cannot be filled in before it has happened.
+ *
+ * The daily cutoff no longer refuses anything here. Enforcing it would be
+ * theatre: a participant locked out at 23:59 could write the same day as a
+ * past date the next morning. It still governs the nightly job, which is the
+ * only place it means anything.
  *
  * `settings.correction_days` no longer governs this. It is left on the row so
  * no migration is needed, and is not exposed in the settings form.
@@ -127,6 +147,7 @@ export function participantMayWrite(
   now: Date = new Date(),
 ): WritePermission {
   const clock = competitionClock(row, now);
+  const lastScorableDay = clock.lastDay;
 
   if (!clock.started) return { allowed: false, reason: "not_started" };
   if (!isScorableDate(row.startDate as IsoDate, row.totalWeeks, entryDate)) {
@@ -136,21 +157,13 @@ export function participantMayWrite(
   const age = daysBetween(entryDate, clock.today);
   if (age < 0) return { allowed: false, reason: "future_date" };
 
-  // Every in-challenge day shuts at the same moment: the end of the last day.
-  const closesAfter = clock.lastDay;
-
-  // Once the challenge is over nothing is self-writable; an organiser can
-  // still correct a day, and the audit log records it.
-  if (clock.finished) {
-    return { allowed: false, reason: "challenge_finished", correctionClosesAfter: closesAfter };
+  // The one thing that shuts a day. An organiser can still correct one
+  // afterwards, and the audit log records it.
+  if (clock.closed) {
+    return { allowed: false, reason: "competition_closed", lastScorableDay };
   }
 
-  // The final day carries the one deadline that means anything.
-  if (clock.today === clock.lastDay && clock.cutoffPassed) {
-    return { allowed: false, reason: "cutoff_passed", correctionClosesAfter: closesAfter };
-  }
-
-  return { allowed: true, correctionClosesAfter: closesAfter };
+  return { allowed: true, lastScorableDay };
 }
 
 export function refusalMessage(reason: WriteRefusal, row: Settings): string {
@@ -161,9 +174,7 @@ export function refusalMessage(reason: WriteRefusal, row: Settings): string {
       return "That date falls outside the 12-week challenge.";
     case "future_date":
       return "You cannot fill in a day before it happens.";
-    case "cutoff_passed":
-      return `This is the last day of the challenge and the ${formatTime(row.submissionCutoff)} deadline has passed. Ask a BCJ organiser to record this day.`;
-    case "challenge_finished":
-      return "The 12 weeks are over, so days can no longer be changed here. Ask a BCJ organiser if something needs correcting.";
+    case "competition_closed":
+      return "The organisers have closed the challenge, so days can no longer be changed here. Ask a BCJ organiser if something needs correcting.";
   }
 }
