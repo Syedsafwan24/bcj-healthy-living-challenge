@@ -67,7 +67,10 @@ export const settings = pgTable(
     // in or correct any day until an organiser closes the competition, so
     // there is no rolling window — see participantMayWrite in lib/settings.ts.
     correctionDays: integer("correction_days").notNull().default(3),
-    /** Open item O-3. A missing submission scores 0%. */
+    // Retained but no longer read. A missing submission always scores 0% and
+    // a week is always divided by seven — see recomputeWeek in
+    // lib/scoring-save.ts. It was open item O-3 and a toggle on the settings
+    // form until 7 September 2026, when BCJ made it the rule.
     missingScoresZero: boolean("missing_scores_zero").notNull().default(true),
     /**
      * V6 section 8 forbids changing scoring rules mid-competition without

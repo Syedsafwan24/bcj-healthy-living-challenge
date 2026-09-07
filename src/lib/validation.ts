@@ -339,9 +339,6 @@ export const settingsSchema = z.object({
   submissionCutoff: z
     .string()
     .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Enter a time as HH:MM"),
-  missingScoresZero: z
-    .union([z.boolean(), z.string()])
-    .transform((v) => v === true || v === "true" || v === "on"),
 });
 
 export type SettingsValues = z.output<typeof settingsSchema>;

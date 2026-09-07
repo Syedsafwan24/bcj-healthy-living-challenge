@@ -232,6 +232,54 @@ suite("scoring-save against the database", () => {
     expect(saved.dailyPercentage).toBe(78.0);
   });
 
+  it("divides a week by seven whatever the retired setting says", async () => {
+    // A day nobody fills in scores 0% and the week is always divided by seven.
+    // That was a toggle until 7 September 2026, when BCJ built it in — so the
+    // settings row is deliberately handed the *old* value here. If anything
+    // still read the column, three perfect days would average 100% instead of
+    // 42.8571%, and filling in fewer days would beat filling in more.
+    const week = 6;
+    const first = addDays(settingsRow.startDate, (week - 1) * 7);
+
+    for (let day = 0; day < 3; day += 1) {
+      await saveEntry(settingsRow, {
+        participantId,
+        entryDate: addDays(first, day),
+        // Week 6 has six challenges plus diet, so this is a perfect day.
+        waterLitres: 2.5,
+        steps: 10000,
+        c3CookAtHome: true,
+        c4NoSugary: true,
+        c5Vegetables: true,
+        c5VegetablesDinner: true,
+        c6NoLateFood: true,
+        breakfast: true,
+        midMorning: true,
+        lunch: true,
+        eveningSnack: true,
+        dinner: true,
+      });
+    }
+
+    const ignored = { ...settingsRow, missingScoresZero: false };
+    const { days } = await recomputeParticipant(ignored, participantId);
+    expect(days).toBeGreaterThan(0);
+
+    const [stored] = await db
+      .select()
+      .from(schema.weeklyScores)
+      .where(
+        and(
+          eq(schema.weeklyScores.participantId, participantId),
+          eq(schema.weeklyScores.weekNo, week),
+        ),
+      );
+
+    // Three days at 100% out of seven, not three out of three.
+    expect(Number(stored.percentage)).toBe(42.8571);
+    expect(stored.daysCounted).toBe(3);
+  });
+
   it("recomputing a participant leaves every stored score unchanged", async () => {
     const before = await db
       .select()

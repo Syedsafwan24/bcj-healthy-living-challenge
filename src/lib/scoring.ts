@@ -294,10 +294,7 @@ export function scoreEntry(
   };
 }
 
-/**
- * A day with no record. Scores 0 against that week's full maximum when
- * `missing_scores_zero` is true (open item O-3, assumed yes).
- */
+/** A day with no record. Scores 0 against that week's full maximum. */
 export function scoreMissingDay(
   settings: ScoringSettings,
   entryDate: IsoDate,
@@ -323,9 +320,8 @@ export function dailyMaxForWeek(
 
 /**
  * Weekly percentage — section 4.6: the average of that week's seven daily
- * percentages. The divisor is always 7. A day with no record contributes 0
- * when `missingScoresZero` is true, so a participant cannot raise their week
- * by logging fewer days.
+ * percentages. The divisor is always 7, and a day with no record contributes
+ * 0, so a participant can never raise their week by filling in fewer days.
  */
 export function weeklyPercentage(
   dailyPercentages: number[],

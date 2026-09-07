@@ -104,7 +104,7 @@ async function main() {
       timezone: "Asia/Riyadh",
       submissionCutoff: "23:59", // O-4
       correctionDays: 3, // unused; see the note on the column in schema.ts
-      missingScoresZero: true, // O-3
+      missingScoresZero: true, // unused; see the note on the column in schema.ts
       rulesLocked: false,
     })
     .onConflictDoNothing();

@@ -16,7 +16,7 @@ import { competitionClock, getSettings } from "@/lib/settings";
  *
  *   1. For each active participant with no submitted entry for a past
  *      scorable date, insert a `missing` entry with null inputs.
- *   2. Score those days at 0%, if `missing_scores_zero` is true.
+ *   2. Score those days at 0%.
  *   3. Lock each four-week block once its catch-up week has ended, and every
  *      entry once an organiser has closed the competition.
  *   4. Recompute the affected weekly and final scores.
@@ -94,9 +94,7 @@ async function runNightly(): Promise<JobResult> {
       action: "entry.marked_missing",
       entityType: "daily_entry",
       newValue: `${base.markedMissing} days marked missing across ${sweep.participantsTouched} participants`,
-      reason: settings.missingScoresZero
-        ? "Nightly job: unrecorded days score 0% (open item O-3)"
-        : "Nightly job: unrecorded days flagged, not scored",
+      reason: "Nightly job: unrecorded days score 0%",
       ip: null,
     });
   }

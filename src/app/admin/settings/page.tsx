@@ -117,7 +117,6 @@ export default async function SettingsPage() {
           maxActiveWeek: settings.maxActiveWeek,
           timezone: settings.timezone,
           submissionCutoff: settings.submissionCutoff.slice(0, 5),
-          missingScoresZero: settings.missingScoresZero,
           rulesLocked: settings.rulesLocked,
         }}
         challengeCount={CHALLENGES.length}

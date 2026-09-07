@@ -202,9 +202,14 @@ export async function recomputeWeek(
 
   const byDate = new Map(rows.map((r) => [r.entryDate, r]));
 
-  // A day with no record scores 0 when missing_scores_zero is true (O-3).
-  // If BCJ ever sets it false, unrecorded days drop out of the average
-  // instead of pulling it down.
+  // A day with no record scores 0, and the week is always divided by seven.
+  //
+  // This is the rule, not a setting. It used to be a toggle on /admin/settings
+  // (open item O-3), but turning it off would have made filling in only your
+  // best days beat filling in all of them — three days at 100% would average
+  // 100% while a full week at 90% averaged 90%. That inverts a consistency
+  // challenge, so BCJ built it in on 7 September 2026 rather than leaving it
+  // switchable. The column stays on the row; nothing reads it.
   const percentages: number[] = [];
   let daysCounted = 0;
 
@@ -213,14 +218,12 @@ export async function recomputeWeek(
     if (entry && entry.status !== "missing") {
       percentages.push(Number(entry.dailyPercentage ?? 0));
       daysCounted += 1;
-    } else if (row.missingScoresZero) {
+    } else {
       percentages.push(0);
     }
   }
 
-  const divisor = row.missingScoresZero ? dates.length : Math.max(daysCounted, 1);
-  const percentage =
-    percentages.length === 0 ? 0 : weeklyPercentage(percentages, divisor);
+  const percentage = weeklyPercentage(percentages, dates.length);
 
   await tx
     .insert(weeklyScores)

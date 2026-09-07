@@ -1,7 +1,7 @@
 "use client";
 
 import { Lock, Unlock } from "lucide-react";
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect } from "react";
 import { useFormStatus } from "react-dom";
 import { toast } from "sonner";
 
@@ -11,7 +11,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 
 import {
   lockRules,
@@ -39,7 +38,6 @@ export function SettingsForm({
     maxActiveWeek: number;
     timezone: string;
     submissionCutoff: string;
-    missingScoresZero: boolean;
     rulesLocked: boolean;
   };
   challengeCount: number;
@@ -48,7 +46,6 @@ export function SettingsForm({
     updateSettings,
     null,
   );
-  const [missingZero, setMissingZero] = useState(settings.missingScoresZero);
 
   useEffect(() => {
     if (state?.ok && state.message) toast.success(state.message);
@@ -137,23 +134,14 @@ export function SettingsForm({
 
           <div className="space-y-2">
             <Label className="text-sm font-medium">
-              A missing submission scores 0%
+              A day nobody fills in
             </Label>
-            <div className="flex min-h-11 items-center gap-3 rounded-lg border px-3">
-              <Switch
-                id="missingScoresZero"
-                name="missingScoresZero"
-                checked={missingZero}
-                onCheckedChange={setMissingZero}
-                value="true"
-              />
-              <Label htmlFor="missingScoresZero" className="text-sm font-normal">
-                {missingZero ? "Yes" : "No — unrecorded days drop out"}
-              </Label>
+            <div className="flex min-h-11 items-center rounded-lg border bg-muted/40 px-3 text-sm">
+              Scores 0%
             </div>
             <p className="text-xs leading-relaxed text-muted-foreground">
-              Open item O-3, assumed yes. With this on, a week is always divided
-              by 7, so skipping a day cannot raise an average.
+              Built in, not a setting. A week is always divided by 7, so
+              filling in fewer days can never raise an average.
             </p>
           </div>
         </CardContent>

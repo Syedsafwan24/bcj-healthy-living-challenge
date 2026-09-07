@@ -329,7 +329,7 @@ the nightly job, which is the only place it decides anything.
 
 One run per day after the cutoff, in the settings timezone. It inserts a
 `missing` entry for every active participant with no record for a past scorable
-date, scores those days at 0% when `missing_scores_zero` is true, locks each
+date, scores those days at 0%, locks each
 four-week block once its catch-up week has ended (and every entry once an
 organiser has closed the competition), and recomputes the affected weekly and
 final scores.
@@ -355,10 +355,10 @@ the build specification records, and each is marked in the code where it bites.
 | --- | --- | --- |
 | O-1 | Nine challenges or ten | C10 is a phase label. Weeks 10–12 repeat C1–C9, daily max 100 |
 | O-2 | 90 days or 84 | 84 days, 12 weeks, maximum 1,200 |
-| O-3 | Missing submission scores 0% | Yes |
-| O-4 | Deadline and correction window | BCJ's rule: any day of the challenge stays open to the participant until the last day of week 12. The 23:59 Jeddah cutoff is the deadline on that final day only. This replaces the 3-day rolling window originally assumed, so `settings.correction_days` is retained on the row but unused |
+| O-3 | Missing submission scores 0% | **Decided.** Yes, and built in rather than configurable since 7 September 2026: a week is always divided by 7. Turning it off would have let three days at 100% beat a full week at 90%. `settings.missing_scores_zero` is retained on the row but unused |
+| O-4 | Deadline and correction window | BCJ's rule: the challenge is filled in in four-week blocks, each with one further week to catch up — weeks 1–4 close at the end of week 5, weeks 5–8 at the end of week 9, and weeks 9–12 when an organiser closes the competition. See **Entry deadlines**. This replaces the 3-day rolling window originally assumed, so `settings.correction_days` is retained on the row but unused. The 23:59 cutoff no longer refuses a participant write; it bounds the nightly job only |
 | O-5 | Tie-break | Higher final score, then earlier registration |
-| O-6 | Diet compliance definition | Placeholder helper text on `/app/plan` |
+| O-6 | Diet compliance definition | Helper text on the daily form: answer Yes for an occasion when you ate what your assigned plan sets out. The five occasions score 2 points each, 10 a day from week 1. `/app/plan` was removed on 5 September when BCJ took the diet category out of the participant's view |
 | O-7 | No email field on the form | Email required at registration |
 | O-8 | Form pages 2–7 unread | `participants.extra jsonb` carries them without a migration |
 | O-9 | Rounding | Floor |

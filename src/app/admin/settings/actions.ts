@@ -47,7 +47,10 @@ export interface SettingsState {
 }
 
 /** Changing any of these moves everyone's score, so they recompute. */
-const SCORING_FIELDS = ["startDate", "totalWeeks", "maxActiveWeek", "missingScoresZero"];
+const SCORING_FIELDS = ["startDate", "totalWeeks", "maxActiveWeek"];
+
+/** The three the lock freezes. Disabled on the form, so never submitted. */
+const FROZEN_FIELDS = ["startDate", "totalWeeks", "maxActiveWeek"] as const;
 
 const TRACKED = [
   "startDate",
@@ -55,7 +58,6 @@ const TRACKED = [
   "maxActiveWeek",
   "timezone",
   "submissionCutoff",
-  "missingScoresZero",
 ];
 
 export async function updateSettings(
@@ -66,10 +68,36 @@ export async function updateSettings(
   const before = await getSettings();
 
   const raw = Object.fromEntries(formData) as Record<string, string>;
-  const parsed = settingsSchema.safeParse({
-    ...raw,
-    missingScoresZero: formData.get("missingScoresZero") ?? false,
-  });
+
+  // V6 section 8: the scoring rules are frozen once locked.
+  //
+  // The form disables those three inputs, and a disabled input is not
+  // submitted — so when the rules are locked they arrive absent, not
+  // unchanged. Validating the form as it stands would then fail on three
+  // fields the organiser cannot even edit, and the Deadlines card below them
+  // could never be saved at all. So the stored values are filled in here.
+  //
+  // An explicit attempt to change one is still refused rather than quietly
+  // ignored, which is what a request built by hand would look like.
+  if (before.rulesLocked) {
+    const changed = FROZEN_FIELDS.some(
+      (field) =>
+        raw[field] !== undefined &&
+        raw[field] !== String((before as unknown as Record<string, unknown>)[field]),
+    );
+    if (changed) {
+      return {
+        ok: false,
+        error:
+          "The scoring rules are locked. Unlock them below, with your password and authenticator code, before changing the start date, the number of weeks or the active weeks.",
+      };
+    }
+    raw.startDate = before.startDate;
+    raw.totalWeeks = String(before.totalWeeks);
+    raw.maxActiveWeek = String(before.maxActiveWeek);
+  }
+
+  const parsed = settingsSchema.safeParse(raw);
   if (!parsed.success) {
     return { ok: false, errors: fieldErrors(parsed.error) };
   }
@@ -89,21 +117,6 @@ export async function updateSettings(
     };
   }
 
-  // V6 section 8: the scoring rules are frozen once the competition starts.
-  if (before.rulesLocked) {
-    const frozen =
-      values.startDate !== before.startDate ||
-      values.totalWeeks !== before.totalWeeks ||
-      values.maxActiveWeek !== before.maxActiveWeek;
-    if (frozen) {
-      return {
-        ok: false,
-        error:
-          "The scoring rules are locked. Unlock them below, with your password and authenticator code, before changing the start date, the number of weeks or the active weeks.",
-      };
-    }
-  }
-
   const [after] = await db
     .update(settings)
     .set({
@@ -112,7 +125,6 @@ export async function updateSettings(
       maxActiveWeek: values.maxActiveWeek,
       timezone: values.timezone,
       submissionCutoff: values.submissionCutoff,
-      missingScoresZero: values.missingScoresZero,
     })
     .where(eq(settings.id, 1))
     .returning();
