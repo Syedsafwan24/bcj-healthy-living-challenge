@@ -78,10 +78,9 @@ suite("scoring-save against the database", () => {
   });
 
   it("writes the day, the week and the final score in one transaction", async () => {
-    // Week 2, day 1. Water 2.0 L, steps 7,400 — vector T2, recomputed under
-    // the two-meal diet rule. breakfast, mid-morning and evening snack are
-    // still written here on purpose: they are columns an old row can carry,
-    // and they must not add points. Lunch alone scores 5.
+    // Week 2, day 1. Water 2.0 L, steps 7,400, diet 4 of 5 — specification
+    // vector T2, which prints 23 / 30. Only steps depart from it now, because
+    // they award a fraction of a point.
     const entryDate = addDays(settingsRow.startDate, 7);
 
     const saved = await saveEntry(settingsRow, {
@@ -97,15 +96,15 @@ suite("scoring-save against the database", () => {
     });
 
     expect(saved.weekNo).toBe(2);
-    // Steps 7,400 earns 7.4, not 7 — partial credit, steps only. The diet
-    // score is gone, so the day is worth its two challenges alone.
-    expect(saved.dailyPoints).toBe(15.4);
-    expect(saved.maxPoints).toBe(20);
-    expect(saved.dailyPercentage).toBe(77.0);
+    // 8 water + 7.4 steps + 8 diet. Steps earn 7.4, not the 7 the printed
+    // vector assumed — partial credit, steps only.
+    expect(saved.dailyPoints).toBe(23.4);
+    expect(saved.maxPoints).toBe(30);
+    expect(saved.dailyPercentage).toBe(78.0);
 
-    // One day of 77.0 across a seven-day week.
-    expect(saved.weekPercentage).toBe(11.0);
-    expect(saved.finalScore).toBe(11.0);
+    // One day of 78.0 across a seven-day week.
+    expect(saved.weekPercentage).toBe(11.1429);
+    expect(saved.finalScore).toBe(11.1429);
 
     // The three calculated columns are on the row, and no endpoint wrote them.
     const [stored] = await db
@@ -120,9 +119,9 @@ suite("scoring-save against the database", () => {
 
     expect(stored.weekNo).toBe(2);
     // Stored as numeric, so it comes back a fixed-scale string.
-    expect(Number(stored.dailyPoints)).toBe(15.4);
-    expect(stored.maxPoints).toBe(20);
-    expect(Number(stored.dailyPercentage)).toBe(77.0);
+    expect(Number(stored.dailyPoints)).toBe(23.4);
+    expect(stored.maxPoints).toBe(30);
+    expect(Number(stored.dailyPercentage)).toBe(78.0);
     expect(stored.status).toBe("submitted");
   });
 
@@ -155,7 +154,9 @@ suite("scoring-save against the database", () => {
       );
 
     expect(rows).toHaveLength(1);
-    expect(Number(rows[0].dailyPoints)).toBe(20); // 10 water + 10 steps
+    // 10 water + 10 steps + 10 diet, and the resubmission replaced the
+    // earlier answers rather than adding a second row.
+    expect(Number(rows[0].dailyPoints)).toBe(30);
 
     // A direct insert bypassing ON CONFLICT is refused by the constraint.
     await expect(
@@ -226,9 +227,9 @@ suite("scoring-save against the database", () => {
     });
 
     expect(saved.weekNo).toBe(2);
-    expect(saved.maxPoints).toBe(20);
-    expect(saved.dailyPoints).toBe(15.4);
-    expect(saved.dailyPercentage).toBe(77.0);
+    expect(saved.maxPoints).toBe(30);
+    expect(saved.dailyPoints).toBe(23.4);
+    expect(saved.dailyPercentage).toBe(78.0);
   });
 
   it("recomputing a participant leaves every stored score unchanged", async () => {
@@ -252,7 +253,7 @@ suite("scoring-save against the database", () => {
   });
 
   it("a missing day scores 0 against that week's full maximum", async () => {
-    // Week 4: nine challenges are not active yet, so the maximum is 50.
+    // Week 4: four challenges are active, plus the 10 diet points.
     const entryDate = addDays(settingsRow.startDate, 21);
 
     const saved = await saveEntry(settingsRow, {
@@ -263,7 +264,7 @@ suite("scoring-save against the database", () => {
 
     expect(saved.weekNo).toBe(4);
     expect(saved.dailyPoints).toBe(0);
-    expect(saved.maxPoints).toBe(40); // vector T6, without the diet score
+    expect(saved.maxPoints).toBe(50); // vector T6: four challenges plus diet
     expect(saved.dailyPercentage).toBe(0);
   });
 });

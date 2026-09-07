@@ -31,7 +31,7 @@ const DIET_CATEGORIES = [
     maxWeight: null,
     sortOrder: 1,
     plan:
-      "Age-appropriate portions at lunch and dinner. Follow the plan issued " +
+      "Age-appropriate portions at every eating occasion. Follow the plan issued " +
       "by the BCJ nutrition team for this age band.",
   },
   {

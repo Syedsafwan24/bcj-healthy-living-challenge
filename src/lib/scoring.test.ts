@@ -37,67 +37,82 @@ function dayInWeek(weekNo: number, dayOffset = 0) {
 }
 
 /**
- * BCJ removed the separate diet score on 5 September 2026. A day is now
- * worth its lifestyle challenges alone, so every section 4.8 vector below
- * loses the 10-point diet component from both its total and its maximum.
- * Each one records the figure the specification printed, so the departure
- * stays auditable against BCJ's document.
+ * Diet is back to the five eating occasions at two points each, as
+ * specification section 4.4 has it — BCJ cut it to two meals on 4 September
+ * 2026, removed it on the 5th, and restored all five on the 7th.
  *
- * The meal columns still exist and old rows still carry answers, so the
- * vectors keep setting them — they must contribute nothing.
+ * So "diet 4 of 5" exists again and these vectors can use section 4.8's own
+ * diet figures. What still departs from the printed totals is steps: they
+ * award a fraction of a point since 5 September, so any vector with a
+ * non-whole thousand moves. Each one records the printed figure beside it.
  */
-const MEALS_ANSWERED: EntryInputs = { lunch: true, dinner: true };
+const ALL_DIET: EntryInputs = {
+  breakfast: true,
+  midMorning: true,
+  lunch: true,
+  eveningSnack: true,
+  dinner: true,
+};
+
+/** Section 4.8's own "diet 4 of 5" — 8 of 10. */
+const FOUR_OF_FIVE: EntryInputs = {
+  breakfast: true,
+  midMorning: true,
+  lunch: true,
+  eveningSnack: true,
+  dinner: false,
+};
 
 describe("section 4.8 test vectors", () => {
-  it("T1 — week 1, water 2.0 L → 8 / 10, 80.0000% (4.8 prints 18 / 20)", () => {
+  it("T1 — week 1, water 2.0 L, diet 5/5 → 18 / 20, 90.0000%", () => {
     const s = scoreEntry(
       SETTINGS,
-      { waterLitres: 2.0, ...MEALS_ANSWERED },
+      { waterLitres: 2.0, ...ALL_DIET },
       dayInWeek(1),
     );
     expect(s.weekNo).toBe(1);
     expect(s.activeChallenges).toBe(1);
-    expect(s.dailyPoints).toBe(8);
-    expect(s.maxPoints).toBe(10);
-    expect(s.dailyPercentage).toBe(80.0);
+    expect(s.dailyPoints).toBe(18);
+    expect(s.maxPoints).toBe(20);
+    expect(s.dailyPercentage).toBe(90.0);
   });
 
-  // Section 4.8 prints 23 / 30 (76.6667%) for diet 4 of 5 and whole-point
-  // steps. Two rule changes since: diet is 5 not 8, and steps award a
-  // fraction, so 7,400 is 7.4 not 7. 8 + 7.4 + 5 = 20.4.
-  it("T2 — week 2, water 2.0 L, steps 7,400 → 15.4 / 20, 77.0000% (4.8 prints 23 / 30)", () => {
+  // Section 4.8 prints 23 / 30 (76.6667%) with whole-point steps. Only steps
+  // move now: 7,400 is 7.4 not 7, so 8 + 7.4 + 8 = 23.4.
+  it("T2 — week 2, water 2.0 L, steps 7,400, diet 4/5 → 23.4 / 30, 78.0000%", () => {
     const s = scoreEntry(
       SETTINGS,
-      { waterLitres: 2.0, steps: 7400, ...MEALS_ANSWERED },
+      { waterLitres: 2.0, steps: 7400, ...FOUR_OF_FIVE },
       dayInWeek(2),
     );
     expect(s.activeChallenges).toBe(2);
+    expect(s.dietEarned).toBe(8);
     expect(s.challenges[1].points).toBe(7.4);
-    expect(s.dailyPoints).toBe(15.4);
-    expect(s.maxPoints).toBe(20);
-    expect(s.dailyPercentage).toBe(77.0);
+    expect(s.dailyPoints).toBe(23.4);
+    expect(s.maxPoints).toBe(30);
+    expect(s.dailyPercentage).toBe(78.0);
   });
 
-  // Section 4.8 prints 36 / 40 (90.0000%). Now: water 10, steps 8.2 (not 8),
-  // C3 10, diet 5 → 33.2.
-  it("T3 — week 3, water 3.0 L, steps 8,200, C3 Yes → 28.2 / 30, 94.0000% (4.8 prints 36 / 40)", () => {
+  // Section 4.8 prints 36 / 40 (90.0000%). Only steps move: water 10,
+  // steps 8.2 (not 8), C3 10, diet 8 → 36.2.
+  it("T3 — week 3, water 3.0 L, steps 8,200, C3 Yes, diet 4/5 → 36.2 / 40, 90.5000%", () => {
     const s = scoreEntry(
       SETTINGS,
       {
         waterLitres: 3.0,
         steps: 8200,
         c3CookAtHome: true,
-        ...MEALS_ANSWERED,
+        ...FOUR_OF_FIVE,
       },
       dayInWeek(3),
     );
     expect(s.activeChallenges).toBe(3);
-    expect(s.dailyPoints).toBe(28.2);
-    expect(s.maxPoints).toBe(30);
-    expect(s.dailyPercentage).toBe(94.0);
+    expect(s.dailyPoints).toBe(36.2);
+    expect(s.maxPoints).toBe(40);
+    expect(s.dailyPercentage).toBe(90.5);
   });
 
-  it("T4 — week 7 mixed inputs → 57 / 70, 81.4286% (4.8 prints 67 / 80)", () => {
+  it("T4 — week 7 mixed inputs → 67 / 80, 83.7500%", () => {
     const s = scoreEntry(
       SETTINGS,
       {
@@ -111,17 +126,17 @@ describe("section 4.8 test vectors", () => {
         c5VegetablesDinner: true,
         c6NoLateFood: false,
         sleepHours: 7.5,
-        ...MEALS_ANSWERED,
+        ...ALL_DIET,
       },
       dayInWeek(7),
     );
     expect(s.activeChallenges).toBe(7);
-    expect(s.dailyPoints).toBe(57);
-    expect(s.maxPoints).toBe(70);
-    expect(s.dailyPercentage).toBe(81.4286);
+    expect(s.dailyPoints).toBe(67);
+    expect(s.maxPoints).toBe(80);
+    expect(s.dailyPercentage).toBe(83.75);
   });
 
-  it("T5 — week 10, all nine at full marks → 90 / 90, 100.0000% (4.8 prints 100 / 100)", () => {
+  it("T5 — week 10, all nine at full marks, diet 5/5 → 100 / 100, 100.0000%", () => {
     const s = scoreEntry(
       SETTINGS,
       {
@@ -135,26 +150,26 @@ describe("section 4.8 test vectors", () => {
         sleepHours: 10,
         c8Mindfulness: true,
         c9ScreenTime: true,
-        ...MEALS_ANSWERED,
+        ...ALL_DIET,
       },
       dayInWeek(10),
     );
     expect(s.weekNo).toBe(10);
     expect(s.activeChallenges).toBe(9); // C10 is a phase label, O-1
-    expect(s.dailyPoints).toBe(90);
-    expect(s.maxPoints).toBe(90);
+    expect(s.dailyPoints).toBe(100);
+    expect(s.maxPoints).toBe(100);
     expect(s.dailyPercentage).toBe(100.0);
   });
 
-  it("T6 — week 4, no record, deadline passed → 0 / 40, 0.0000% (4.8 prints 0 / 50)", () => {
+  it("T6 — week 4, no record, deadline passed → 0 / 50, 0.0000%", () => {
     const s = scoreMissingDay(SETTINGS, dayInWeek(4));
     expect(s.activeChallenges).toBe(4);
     expect(s.dailyPoints).toBe(0);
-    expect(s.maxPoints).toBe(40);
+    expect(s.maxPoints).toBe(50);
     expect(s.dailyPercentage).toBe(0.0);
   });
 
-  it("T7 — week 1, water 0.249 L → 0 / 10, 0.0000% (4.8 prints 0 / 20)", () => {
+  it("T7 — week 1, water 0.249 L, diet 0/5 → 0 / 20, 0.0000%", () => {
     const s = scoreEntry(
       SETTINGS,
       {
@@ -168,48 +183,48 @@ describe("section 4.8 test vectors", () => {
       dayInWeek(1),
     );
     expect(s.dailyPoints).toBe(0);
-    expect(s.maxPoints).toBe(10);
+    expect(s.maxPoints).toBe(20);
     expect(s.dailyPercentage).toBe(0.0);
   });
 
   // Section 4.8 prints 18 / 30: 999 steps fell short of the first whole point
   // and scored 0. Steps now award a fraction, so 999 earns 0.99 — truncated,
   // not rounded, so it never reads as the full point it did not reach.
-  it("T8 — week 2, water 2.0 L, steps 999 → 8.99 / 20, 44.9500% (4.8 prints 18 / 30)", () => {
+  it("T8 — week 2, water 2.0 L, steps 999, diet 5/5 → 18.99 / 30, 63.3000%", () => {
     const s = scoreEntry(
       SETTINGS,
-      { waterLitres: 2.0, steps: 999, ...MEALS_ANSWERED },
+      { waterLitres: 2.0, steps: 999, ...ALL_DIET },
       dayInWeek(2),
     );
     expect(s.challenges[1].points).toBe(0.99);
-    expect(s.dailyPoints).toBe(8.99);
-    expect(s.maxPoints).toBe(20);
-    expect(s.dailyPercentage).toBe(44.95);
+    expect(s.dailyPoints).toBe(18.99);
+    expect(s.maxPoints).toBe(30);
+    expect(s.dailyPercentage).toBe(63.3);
   });
 
-  // Section 4.8 prints 23 / 30; the two-meal diet and fractional steps make
-  // the same day 20.4 / 30. What this vector guards is the week, not the total.
-  it("T9 — a week 2 record scored while the competition is in week 7 → 15.4 / 20", () => {
+  // Section 4.8 prints 23 / 30; fractional steps make the same day 23.4 / 30.
+  // What this vector guards is the week, not the total.
+  it("T9 — a week 2 record scored while the competition is in week 7 → 23.4 / 30, 78.0000%", () => {
     // The function is given only the entry's own date. If it read the clock
-    // instead, this would return 20.4 / 80 and the participant would be scored
+    // instead, this would return 23.4 / 80 and the participant would be scored
     // against seven challenges they had not yet been given.
     const entryDate = dayInWeek(2, 3);
     const s = scoreEntry(
       SETTINGS,
-      { waterLitres: 2.0, steps: 7400, ...MEALS_ANSWERED },
+      { waterLitres: 2.0, steps: 7400, ...FOUR_OF_FIVE },
       entryDate,
     );
     expect(s.weekNo).toBe(2);
     expect(s.activeChallenges).toBe(2);
-    expect(s.dailyPoints).toBe(15.4);
-    expect(s.maxPoints).toBe(20);
-    expect(s.dailyPercentage).toBe(77.0);
+    expect(s.dailyPoints).toBe(23.4);
+    expect(s.maxPoints).toBe(30);
+    expect(s.dailyPercentage).toBe(78.0);
 
     // Scoring the same inputs again yields the same result, whatever the date
     // of the correction. The result is a function of (settings, inputs, date).
     const again = scoreEntry(
       SETTINGS,
-      { waterLitres: 2.0, steps: 7400, ...MEALS_ANSWERED },
+      { waterLitres: 2.0, steps: 7400, ...FOUR_OF_FIVE },
       entryDate,
     );
     expect(again).toEqual(s);
@@ -233,9 +248,7 @@ describe("section 4.2 — cumulative active set", () => {
     const maxima = Array.from({ length: 12 }, (_, i) =>
       dailyMaxForWeek(i + 1, SETTINGS.maxActiveWeek),
     );
-    // Section 4.7 prints these 10 higher throughout: each included the diet
-    // score BCJ has since removed.
-    expect(maxima).toEqual([10, 20, 30, 40, 50, 60, 70, 80, 90, 90, 90, 90]);
+    expect(maxima).toEqual([20, 30, 40, 50, 60, 70, 80, 90, 100, 100, 100, 100]);
   });
 });
 
@@ -289,11 +302,11 @@ describe("section 4.3 — points per challenge", () => {
   it("a day's total carries the fraction without float dust", () => {
     const s = scoreEntry(
       SETTINGS,
-      { waterLitres: 2.0, steps: 6900, ...MEALS_ANSWERED },
+      { waterLitres: 2.0, steps: 6900, ...ALL_DIET },
       dayInWeek(2),
     );
-    // 8 water + 6.9 steps, not 14.900000000000002.
-    expect(s.dailyPoints).toBe(14.9);
+    // 8 water + 6.9 steps + 10 diet, not 24.900000000000002.
+    expect(s.dailyPoints).toBe(24.9);
   });
 
   it("scores a missing or negative value as 0", () => {
@@ -358,36 +371,49 @@ describe("C5 — vegetables, answered per meal", () => {
       week5(),
     );
     expect(s.challenges.find((c) => c.ref === "C5")!.max).toBe(10);
-    expect(s.maxPoints).toBe(50);
+    expect(s.maxPoints).toBe(60);
   });
 });
 
-describe("the retired diet score", () => {
-  // BCJ removed the separate diet component on 5 September 2026. The five
-  // meal columns survive so nobody's recorded answers are destroyed, but a
-  // day's score must no longer include them.
-  it("adds nothing, whatever the meal columns say", () => {
-    const empty = scoreEntry(SETTINGS, {}, dayInWeek(1));
-    const answered = scoreEntry(
-      SETTINGS,
-      {
-        breakfast: true,
-        midMorning: true,
-        lunch: true,
-        eveningSnack: true,
-        dinner: true,
-      },
-      dayInWeek(1),
-    );
-    expect(answered.dailyPoints).toBe(empty.dailyPoints);
-    expect(answered.maxPoints).toBe(empty.maxPoints);
+describe("section 4.4 — diet", () => {
+  it("is active from week 1 and worth 2 points per occasion", () => {
+    const s = scoreEntry(SETTINGS, { lunch: true }, dayInWeek(1));
+    expect(s.dietEarned).toBe(2);
+    expect(s.dietMax).toBe(10);
   });
 
-  it("leaves a week 1 day worth its single challenge", () => {
-    const s = scoreEntry(SETTINGS, { waterLitres: 2.5 }, dayInWeek(1));
-    expect(s.dailyPoints).toBe(10);
-    expect(s.maxPoints).toBe(10);
-    expect(s.dailyPercentage).toBe(100);
+  it("scores all five occasions, in the order they are eaten", () => {
+    const s = scoreEntry(SETTINGS, {}, dayInWeek(1));
+    expect(s.diet).toHaveLength(5);
+    expect(s.diet.map((d) => d.title)).toEqual([
+      "Breakfast",
+      "Mid-Morning",
+      "Lunch",
+      "Evening Snack",
+      "Dinner",
+    ]);
+  });
+
+  it("reaches 10 only when every occasion is answered Yes", () => {
+    const four = scoreEntry(SETTINGS, FOUR_OF_FIVE, dayInWeek(1));
+    expect(four.dietEarned).toBe(8);
+
+    const all = scoreEntry(SETTINGS, ALL_DIET, dayInWeek(1));
+    expect(all.dietEarned).toBe(10);
+    expect(all.dietMax).toBe(10);
+  });
+
+  it("marks an occasion left blank as unanswered, and scores it 0", () => {
+    const s = scoreEntry(SETTINGS, { lunch: true }, dayInWeek(1));
+    const breakfast = s.diet.find((d) => d.field === "breakfast")!;
+    expect(breakfast.answered).toBe(false);
+    expect(breakfast.points).toBe(0);
+  });
+
+  it("counts inside the ordinary score, not as a bonus", () => {
+    const s = scoreEntry(SETTINGS, { waterLitres: 2.5, ...ALL_DIET }, dayInWeek(1));
+    expect(s.dailyPoints).toBe(20);
+    expect(s.maxPoints).toBe(20);
   });
 });
 

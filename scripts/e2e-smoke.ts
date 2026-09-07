@@ -218,18 +218,27 @@ async function main() {
   for (const label of [
     "Cook all meals at home",
     "No sugary drinks & desserts",
-    "Eat vegetables with every main meal",
     "No eating after 8 PM",
     "10 minutes of mindfulness or breathing",
     "Limit screen time before bed",
+    // The five diet occasions, spelled exactly as DIET_OCCASIONS titles them.
     "Breakfast",
-    "Mid-morning",
+    "Mid-Morning",
     "Lunch",
-    "Evening snack",
+    "Evening Snack",
     "Dinner",
   ]) {
     await pp.click(`button[aria-label="${label}: yes"]`);
   }
+
+  // C5 is answered per meal rather than Yes/No: Lunch and Dinner are separate
+  // buttons worth five each, so both are needed for its full ten points.
+  await pp.click(
+    'button[aria-label="Eat vegetables with your main meals: Lunch"]',
+  );
+  await pp.click(
+    'button[aria-label="Eat vegetables with your main meals: Dinner"]',
+  );
 
   // Sleep is 1 point per hour capped at 10, so 8 hours scores 8 of 10 and the
   // day totals 98, not 100. The browser preview must agree with the server.

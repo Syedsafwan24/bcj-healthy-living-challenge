@@ -237,8 +237,7 @@ export const dailyEntrySchema = z.object({
   c8Mindfulness: triState,
   c9ScreenTime: triState,
 
-  // Diet. Only lunch and dinner are scored (5 points each); the other
-  // three remain as columns so old rows keep their answers.
+  // Diet — the five eating occasions, two points each (section 4.4).
   breakfast: triState,
   midMorning: triState,
   lunch: triState,

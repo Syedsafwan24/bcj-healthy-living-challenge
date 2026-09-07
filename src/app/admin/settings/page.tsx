@@ -5,7 +5,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireAdmin } from "@/lib/auth/guards";
-import { CHALLENGES } from "@/lib/challenges";
+import { CHALLENGES, DIET_MAX } from "@/lib/challenges";
 import {
   daysBetween,
   formatDateTime,
@@ -230,8 +230,8 @@ export default async function SettingsPage() {
           <CardTitle className="text-lg">Daily maxima under these settings</CardTitle>
           <p className="text-sm text-muted-foreground">
             Specification section 4.7. Each active challenge is worth 10
-            points, and a challenge stays active for the rest of the challenge
-            once its week arrives.
+            points and stays active for the rest of the challenge once its week
+            arrives; diet adds 10 every day from week 1.
           </p>
         </CardHeader>
         <CardContent>
@@ -241,6 +241,8 @@ export default async function SettingsPage() {
                 <tr className="border-b text-left text-muted-foreground">
                   <th className="py-2 pr-4 font-medium">Week</th>
                   <th className="py-2 pr-4 font-medium">Active</th>
+                  <th className="py-2 pr-4 font-medium">Lifestyle</th>
+                  <th className="py-2 pr-4 font-medium">Diet</th>
                   <th className="py-2 font-medium">Daily max</th>
                 </tr>
               </thead>
@@ -255,6 +257,8 @@ export default async function SettingsPage() {
                       <tr key={weekNo} className="border-b last:border-0">
                         <td className="tabular py-2 pr-4">{weekNo}</td>
                         <td className="tabular py-2 pr-4">{active}</td>
+                        <td className="tabular py-2 pr-4">{active * 10}</td>
+                        <td className="tabular py-2 pr-4">{DIET_MAX}</td>
                         <td className="tabular py-2 font-medium">
                           {dailyMaxForWeek(weekNo, settings.maxActiveWeek)}
                         </td>

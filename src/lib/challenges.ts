@@ -189,20 +189,43 @@ export const CHALLENGES: readonly ChallengeConfig[] = [
   },
 ] as const;
 
-/**
- * The five meal columns on daily_entries.
- *
- * BCJ removed the separate diet score on 5 September 2026: a day is now
- * worth the lifestyle challenges alone, and eating well is scored through C5
- * instead. The columns stay so the answers already given are not destroyed,
- * and this type still names them, but nothing scores them.
- */
+/** The five meal columns on daily_entries — specification section 4.4. */
 export type DietField =
   | "breakfast"
   | "midMorning"
   | "lunch"
   | "eveningSnack"
   | "dinner";
+
+export interface DietOccasion {
+  field: DietField;
+  title: string;
+}
+
+/**
+ * The diet score: did you follow your BCJ plan at each of the day's five
+ * eating occasions?
+ *
+ * Two points each, ten in total, active every day from week 1 — so it is part
+ * of the ordinary score rather than a bonus or a tie-breaker.
+ *
+ * This has moved twice. It was five occasions at two points; BCJ cut it to the
+ * two main meals at five points on 4 September 2026, then removed it entirely
+ * on the 5th, and restored all five at two points on 7 September. The columns
+ * were never dropped through any of that, so answers given under each rule are
+ * still on the row — but note that days scored while it was removed carry a
+ * maximum that no longer matches, and need recomputing.
+ */
+export const DIET_OCCASIONS: readonly DietOccasion[] = [
+  { field: "breakfast", title: "Breakfast" },
+  { field: "midMorning", title: "Mid-Morning" },
+  { field: "lunch", title: "Lunch" },
+  { field: "eveningSnack", title: "Evening Snack" },
+  { field: "dinner", title: "Dinner" },
+] as const;
+
+export const POINTS_PER_DIET_OCCASION = 2;
+export const DIET_MAX = DIET_OCCASIONS.length * POINTS_PER_DIET_OCCASION; // 10
 
 export function challengeByRef(ref: ChallengeRef): ChallengeConfig {
   const found = CHALLENGES.find((c) => c.ref === ref);

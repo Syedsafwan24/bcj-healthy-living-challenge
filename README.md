@@ -157,7 +157,7 @@ All nine vectors from specification section 4.8 are in
 daily maxima table, floor rounding, the competition window and the score bands.
 
 ```bash
-npm test                 # 42 unit tests, no database needed
+npm test                 # 103 unit tests, no database needed
 npm run test:integration # the same rules against DATABASE_URL
 ```
 

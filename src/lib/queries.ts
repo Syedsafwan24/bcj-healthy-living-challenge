@@ -193,12 +193,13 @@ export interface LeaderboardRow {
  * How the leaderboard is divided. "overall" is the single ranking V6 section
  * 9 defines; "gender" is the division BCJ awards prizes on.
  *
- * It was diet category and gender together until 5 September 2026. Two
- * changes made that unworkable: weight became optional at registration, so
- * the category it derives from is often absent, and the diet score was
- * removed, so the category no longer affects a single point. Grouping by it
- * meant a "No diet category assigned" division that was not a prize class at
- * all. Gender is asked of everyone, so every participant lands somewhere real.
+ * It was diet category and gender together until 5 September 2026. Weight
+ * became optional at registration, so the category it derives from is often
+ * absent, and grouping by it meant a "No diet category assigned" division that
+ * was not a prize class at all. Gender is asked of everyone, so every
+ * participant lands somewhere real. (The diet score itself is back since
+ * 7 September, but it is scored per meal and never per category, so this
+ * reasoning is unaffected.)
  */
 export type LeaderboardSegment = "overall" | "gender";
 

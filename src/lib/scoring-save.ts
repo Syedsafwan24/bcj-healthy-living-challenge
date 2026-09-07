@@ -128,12 +128,16 @@ export async function saveEntry(
           c6NoLateFood: write.c6NoLateFood ?? null,
           c8Mindfulness: write.c8Mindfulness ?? null,
           c9ScreenTime: write.c9ScreenTime ?? null,
-          // All five meal columns are deliberately absent. BCJ removed the
-          // diet score entirely, so no form submits them any more and they
-          // would arrive here as null — which would quietly wipe the answers
-          // participants gave before the rule changed, the first time anyone
-          // corrected one of those days. They score nothing either way; an
-          // edit simply leaves them as they were.
+          // The five meal columns are updated like any other answer again.
+          // They were left out of this set while the diet score was removed,
+          // so that correcting a day would not wipe answers no form was
+          // submitting; now both forms send all five, and leaving them out
+          // would mean a diet correction silently did nothing.
+          breakfast: write.breakfast ?? null,
+          midMorning: write.midMorning ?? null,
+          lunch: write.lunch ?? null,
+          eveningSnack: write.eveningSnack ?? null,
+          dinner: write.dinner ?? null,
           dailyPoints: String(score.dailyPoints),
           maxPoints: score.maxPoints,
           dailyPercentage: String(score.dailyPercentage),

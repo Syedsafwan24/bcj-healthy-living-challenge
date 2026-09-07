@@ -83,7 +83,7 @@ export default async function RegisterSuccessPage({
               <span className="tabular font-semibold text-foreground">3.</span>
               <span>
                 Week 1 begins on the official start date. Only water is tracked
-                that week, alongside your lunch and dinner.
+                that week, alongside your five eating occasions.
               </span>
             </li>
           </ol>
