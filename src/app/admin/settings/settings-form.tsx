@@ -97,7 +97,7 @@ export function SettingsForm({
             label="Total weeks"
             required
             error={errors.totalWeeks}
-            hint="12 weeks is 84 days and a maximum of 1,200 (open item O-2)."
+            hint="12 weeks is 84 days, and a final score out of 1,200."
           >
             <Input
               id="totalWeeks"
@@ -117,7 +117,7 @@ export function SettingsForm({
             label="Weeks that unlock a challenge"
             required
             error={errors.maxActiveWeek}
-            hint={`${challengeCount} challenges are configured. Weeks beyond this repeat the full set (open item O-1).`}
+            hint={`${challengeCount} challenges are configured. Later weeks repeat the full set rather than adding a tenth.`}
           >
             <Input
               id="maxActiveWeek"
@@ -152,8 +152,8 @@ export function SettingsForm({
         <CardHeader>
           <CardTitle className="text-lg">Deadlines</CardTitle>
           <p className="text-sm text-muted-foreground">
-            Open item O-4. These may be changed at any time; they do not alter
-            how a stored day was scored.
+            These may be changed at any time. Neither alters how a day that is
+            already scored was scored.
           </p>
         </CardHeader>
         <CardContent className="grid gap-5 sm:grid-cols-2">
