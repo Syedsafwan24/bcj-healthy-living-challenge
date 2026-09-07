@@ -259,6 +259,53 @@ export async function unlockRules(
 }
 
 /* ------------------------------------------------------------------ */
+/* Rescoring everyone                                                  */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Rescores every stored day for every active participant.
+ *
+ * A stored day keeps the points and the maximum it was given when it was
+ * written. That is deliberate — a score should not silently change under
+ * somebody's feet — but it means a change to the scoring rules only reaches
+ * days recorded after it. Saving a scoring setting already triggers this;
+ * this button is for the case where the rules changed in the code rather than
+ * in the settings row, which no form can detect.
+ *
+ * It is not destructive: every day is recomputed from its own raw inputs and
+ * its own date, through the same pure function that scored it originally. A
+ * day whose inputs have not changed and whose rules have not changed comes
+ * back identical, so running it twice is safe and running it needlessly costs
+ * nothing but time.
+ */
+export async function recomputeEveryone(): Promise<SettingsState> {
+  const admin = await requireAdmin();
+  const settings = await getSettings();
+
+  const count = await recomputeAll(settings);
+
+  await recordAudit({
+    action: "scores.recomputed",
+    entityType: "settings",
+    actorAdminId: admin.adminId,
+    newValue: `${count} participants rescored`,
+    reason: "Manual recomputation of every score from /admin/settings",
+    ip: await requestIp(),
+  });
+
+  revalidatePath("/admin", "layout");
+  revalidatePath("/app", "layout");
+
+  return {
+    ok: true,
+    message:
+      count === 0
+        ? "There are no active participants to rescore."
+        : `Rescored every day for ${count} participant${count === 1 ? "" : "s"}.`,
+  };
+}
+
+/* ------------------------------------------------------------------ */
 /* Closing the competition                                             */
 /* ------------------------------------------------------------------ */
 
