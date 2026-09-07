@@ -26,7 +26,6 @@ import { dailyEntries, participants } from "@/db/schema";
 import { and, count, eq, lte, ne } from "drizzle-orm";
 
 import { CloseControls } from "./close-controls";
-import { RecomputeControls } from "./recompute-controls";
 import { ResetControls } from "./reset-controls";
 import { LockControls, SettingsForm } from "./settings-form";
 
@@ -126,8 +125,6 @@ export default async function SettingsPage() {
         locked={settings.rulesLocked}
         requireTotp={env.adminRequireTotp}
       />
-
-      <RecomputeControls participantCount={activeCount} />
 
       <CloseControls
         closed={clock.closed}
