@@ -9,6 +9,7 @@ import { ProfileForm } from "./profile-form";
 import { PushToggle } from "./push-toggle";
 import { requireParticipant } from "@/lib/auth/guards";
 import { formatDateTime } from "@/lib/dates";
+import { categoryLabel } from "@/lib/participant-categories";
 import { getParticipantProfile } from "@/lib/queries";
 import { getSettings } from "@/lib/settings";
 import { env } from "@/lib/env";
@@ -21,7 +22,7 @@ export const dynamic = "force-dynamic";
  *
  * Split in two on purpose. The card below holds what the organisers own: the
  * registration ID they sign in with, the name published on the leaderboard,
- * and the gender that decides which division a prize is awarded in. The form
+ * and the category that decides which division a prize is awarded in. The form
  * beneath holds what describes the person, which they can correct
  * themselves.
  */
@@ -41,7 +42,7 @@ export default async function ProfilePage() {
   const rows: Array<[string, React.ReactNode]> = [
     ["Full name", profile.fullName],
     ["Email", profile.email],
-    ["Gender", profile.gender === "male" ? "Male" : "Female"],
+    ["Category", categoryLabel(profile.category)],
     [
       "Registered",
       formatDateTime(profile.registeredAt, settings.timezone),

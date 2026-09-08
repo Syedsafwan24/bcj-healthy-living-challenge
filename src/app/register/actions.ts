@@ -94,7 +94,7 @@ export async function registerParticipant(
             displayName: values.fullName,
             mobile: values.mobile,
             age: values.age ?? null,
-            gender: values.gender,
+            category: values.category,
             heightCm: values.heightCm != null ? String(values.heightCm) : null,
             weightKg: values.weightKg != null ? String(values.weightKg) : null,
             startingWeightKg:

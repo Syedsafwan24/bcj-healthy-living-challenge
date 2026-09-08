@@ -22,12 +22,12 @@ import { scoreEntry, weeklyPercentage, finalScore as sumWeeks, finalPercentage }
 const DEMO_DOMAIN = "@bcj-demo.invalid";
 
 const PEOPLE = [
-  { name: "Abdul Rahman Khan", display: "Abdul R.", age: 34, weight: 82, area: "Al Rawdah", gender: "male", consistency: 0.95 },
-  { name: "Fatima Siddiqui", display: "Fatima S.", age: 29, weight: 61, area: "Al Salamah", gender: "female", consistency: 0.9 },
-  { name: "Imran Bhatkali", display: "Imran B.", age: 41, weight: 94, area: "Al Hamra", gender: "male", consistency: 0.7 },
-  { name: "Ayesha Noor", display: "Ayesha N.", age: 26, weight: 55, area: "Al Andalus", gender: "female", consistency: 0.85 },
-  { name: "Yusuf Kola", display: "Yusuf K.", age: 15, weight: 48, area: "Al Rawdah", gender: "male", consistency: 0.6 },
-  { name: "Zainab Muhammed", display: "Zainab M.", age: 38, weight: 71, area: "Al Salamah", gender: "female", consistency: 0.98 },
+  { name: "Abdul Rahman Khan", display: "Abdul R.", age: 34, weight: 82, area: "Al Rawdah", category: "male", consistency: 0.95 },
+  { name: "Fatima Siddiqui", display: "Fatima S.", age: 29, weight: 61, area: "Al Salamah", category: "female", consistency: 0.9 },
+  { name: "Imran Bhatkali", display: "Imran B.", age: 41, weight: 94, area: "Al Hamra", category: "male", consistency: 0.7 },
+  { name: "Ayesha Noor", display: "Ayesha N.", age: 26, weight: 55, area: "Al Andalus", category: "female", consistency: 0.85 },
+  { name: "Yusuf Kola", display: "Yusuf K.", age: 15, weight: 48, area: "Al Rawdah", category: "male", consistency: 0.6 },
+  { name: "Zainab Muhammed", display: "Zainab M.", age: 38, weight: 71, area: "Al Salamah", category: "female", consistency: 0.98 },
 ];
 
 /** Deterministic pseudo-randomness, so repeated runs give the same demo. */
@@ -119,7 +119,7 @@ async function main() {
         displayName: person.display,
         mobile: `+9665${String(10000000 + index).slice(0, 8)}`,
         age: person.age,
-        gender: person.gender,
+        category: person.category,
         areaOfResidence: person.area,
         residenceStatus: index % 2 === 0 ? "family" : "bachelor",
         heightCm: String(160 + index * 3),

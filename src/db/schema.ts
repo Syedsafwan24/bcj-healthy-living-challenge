@@ -150,7 +150,19 @@ export const dietCategories = pgTable("diet_categories", {
 export const participantStatuses = ["pending", "active", "withdrawn"] as const;
 export type ParticipantStatus = (typeof participantStatuses)[number];
 
-export const genders = ["male", "female"] as const;
+/**
+ * The competition category, which is also the prize division.
+ *
+ * It was a plain male/female gender until 8 September 2026, when BCJ added a
+ * third class so that children are not ranked against adults. "kids" is the
+ * 10-to-17 band the diet categories already use, so a participant's category
+ * and their diet band agree.
+ *
+ * Exactly one applies to each participant, which is what lets the leaderboard
+ * divide by it without anybody appearing twice.
+ */
+export const participantCategories = ["male", "female", "kids"] as const;
+export type ParticipantCategory = (typeof participantCategories)[number];
 export const residenceStatuses = ["bachelor", "family"] as const;
 
 export const participants = pgTable(
@@ -171,7 +183,7 @@ export const participants = pgTable(
     // suggestion just skips the age-based kids check and always flags for
     // review when it is missing. An organiser can still add it later.
     age: integer("age"),
-    gender: text("gender").notNull(),
+    category: text("category").notNull(),
     // No longer collected at registration; kept for anyone who wants to
     // record it on /admin/participants.
     areaOfResidence: text("area_of_residence"),

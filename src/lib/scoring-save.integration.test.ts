@@ -53,7 +53,7 @@ suite("scoring-save against the database", () => {
         displayName: "Integration Test",
         mobile: "+966500000000",
         age: 30,
-        gender: "male",
+        category: "male",
         areaOfResidence: "Test",
         residenceStatus: "family",
         weightKg: "70.00",

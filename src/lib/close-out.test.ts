@@ -54,7 +54,7 @@ suite("closing the competition", () => {
           '+96650000000${n}', 30, 'male', '${status}')`;
 
       await sql.unsafe(`INSERT INTO participants (id, registration_id, full_name,
-        display_name, email, mobile, age, gender, status) VALUES
+        display_name, email, mobile, age, category, status) VALUES
         ${person(ALICE, 1, "active")},
         ${person(BILAL, 2, "active")},
         ${person(WITHDRAWN, 3, "withdrawn")}`);

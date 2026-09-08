@@ -19,6 +19,8 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 
+import { CATEGORY_OPTIONS } from "@/lib/participant-categories";
+
 import { updateParticipant, type ParticipantActionState } from "../actions";
 
 function SubmitButton() {
@@ -38,7 +40,7 @@ export interface EditableParticipant {
   // No longer collected at registration, so an existing record may not have
   // one yet.
   age: number | null;
-  gender: string;
+  category: string;
   weightKg: string | null;
   dietCategoryId: number | null;
   status: string;
@@ -46,7 +48,7 @@ export interface EditableParticipant {
 
 /**
  * Every registration field is editable — registration is self-reported, so a
- * mis-typed name, age or gender has to be correctable without touching the
+ * mis-typed name, age or category has to be correctable without touching the
  * database.
  *
  * None of it changes a score. Scoring reads only the daily entries; age and
@@ -147,14 +149,23 @@ export function ParticipantEditor({
               />
             </Field>
 
-            <Field id="gender" label="Gender" required error={errors.gender}>
-              <Select name="gender" defaultValue={participant.gender}>
-                <SelectTrigger id="gender" className="h-11 w-full">
+            <Field
+              id="category"
+              label="Category"
+              required
+              error={errors.category}
+              hint="The prize division this participant is ranked in."
+            >
+              <Select name="category" defaultValue={participant.category}>
+                <SelectTrigger id="category" className="h-11 w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="male">Male</SelectItem>
-                  <SelectItem value="female">Female</SelectItem>
+                  {CATEGORY_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </Field>

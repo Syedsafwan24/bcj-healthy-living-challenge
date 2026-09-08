@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { genders } from "@/db/schema";
+import { participantCategories } from "@/db/schema";
 import { MIN_PASSWORD_LENGTH } from "@/lib/auth/password-policy";
 import { isIsoDate } from "@/lib/dates";
 import { normaliseRegistrationId } from "@/lib/registration-id";
@@ -74,7 +74,7 @@ export const registrationSchema = z.object({
     .max(100)
     .optional()
     .nullable(),
-  gender: z.enum(genders),
+  category: z.enum(participantCategories),
   // Not collected at registration; an organiser can add it from
   // /admin/participants if BCJ wants it on file.
   heightCm: z.coerce.number().min(50).max(250).optional().nullable(),
@@ -264,7 +264,7 @@ export const adminEntryCorrectionSchema = dailyEntrySchema.extend({
 
 /**
  * Every field an organiser may correct. Registration is self-reported, so a
- * mis-typed name, age or gender needs fixing without going near the database.
+ * mis-typed name, age or category needs fixing without going near the database.
  *
  * None of these affect a score: scoring reads only the daily entries. Age and
  * weight decide which diet category is *suggested* at registration, and the
@@ -281,7 +281,7 @@ export const participantUpdateSchema = z.object({
   // one yet. Optional here too, so correcting an unrelated field never forces
   // an organiser to also backfill these.
   age: z.coerce.number().int().min(10).max(100).optional().nullable(),
-  gender: z.enum(genders),
+  category: z.enum(participantCategories),
   weightKg: z.coerce.number().min(20).max(300).optional().nullable(),
   dietCategoryId: z.coerce.number().int().positive().optional().nullable(),
   status: z.enum(["pending", "active", "withdrawn"]),
@@ -292,7 +292,7 @@ export const participantUpdateSchema = z.object({
  * What a participant may change about themselves on /app/profile.
  *
  * Deliberately narrower than participantUpdateSchema. Diet category and
- * gender ARE the prize division (see groupLeaderboard), starting weight is
+ * category IS the prize division (see groupLeaderboard), starting weight is
  * the baseline any weight judging rests on, and the display name is what
  * appears on the leaderboard — letting a competitor set those would let them
  * pick their own competition class or publish an unmoderated name.

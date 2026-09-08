@@ -81,7 +81,7 @@ async function main() {
   await page.fill("#email", email);
   await page.fill("#mobile", "+966500000111");
   await page.fill("#age", "33");
-  await selectOption(page, "#gender", "Male");
+  await selectOption(page, "#category", "Male");
   await page.fill("#weightKg", "78");
   await page.click('button[type="submit"]');
 
@@ -100,7 +100,7 @@ async function main() {
   await page.fill("#email", email);
   await page.fill("#mobile", "+966500000112");
   await page.fill("#age", "28");
-  await selectOption(page, "#gender", "Female");
+  await selectOption(page, "#category", "Female");
   await page.fill("#weightKg", "58");
   await page.click('button[type="submit"]');
   await page.waitForURL(/\/register\/success/, { timeout: 30000 });

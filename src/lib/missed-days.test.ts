@@ -38,7 +38,7 @@ suite("getMissedDays", () => {
       }
 
       await sql.unsafe(`INSERT INTO participants (id, registration_id, full_name,
-        display_name, email, mobile, age, gender, area_of_residence,
+        display_name, email, mobile, age, category, area_of_residence,
         residence_status, weight_kg, status)
         VALUES ('11111111-1111-1111-1111-111111111111', 'BCJ0001-TEST', 'Test One',
         'Tester', 'p@example.com', '+966500000000', 30, 'male', 'Jeddah',

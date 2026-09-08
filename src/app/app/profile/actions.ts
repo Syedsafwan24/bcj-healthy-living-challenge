@@ -14,7 +14,7 @@ import { fieldErrors, participantSelfUpdateSchema } from "@/lib/validation";
  * A participant correcting their own contact and body details.
  *
  * The fields are those that describe the person rather than their standing in
- * the challenge. Everything that decides a prize — diet category, gender,
+ * the challenge. Everything that decides a prize — the category,
  * starting weight — and everything published or used to sign in — display
  * name, email, registration ID, status — stays with the organisers. The
  * schema is the boundary; this action never reads a field it does not name,

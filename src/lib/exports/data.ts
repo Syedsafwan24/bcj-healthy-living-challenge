@@ -3,6 +3,7 @@ import "server-only";
 import { and, asc, eq, gte, inArray, lte, sql } from "drizzle-orm";
 
 import { db } from "@/db";
+import { categoryLabel } from "@/lib/participant-categories";
 import {
   dailyEntries,
   finalScores,
@@ -245,7 +246,7 @@ async function finalTable(
       email: participants.email,
       mobile: participants.mobile,
       age: participants.age,
-      gender: participants.gender,
+      category: participants.category,
       weightKg: participants.weightKg,
       status: participants.status,
       finalScore: finalScores.finalScore,
@@ -294,7 +295,7 @@ async function finalTable(
     "Email",
     "Mobile",
     "Age",
-    "Gender",
+    "Category",
     "Weight (kg)",
     "Status",
     "Final score",
@@ -321,7 +322,7 @@ async function finalTable(
         r.email,
         r.mobile,
         r.age ?? "",
-        r.gender,
+        categoryLabel(r.category),
         r.weightKg ?? "",
         r.status,
         NUMERIC(r.finalScore ?? 0),
@@ -385,7 +386,7 @@ async function participantsTable(
       email: participants.email,
       mobile: participants.mobile,
       age: participants.age,
-      gender: participants.gender,
+      category: participants.category,
       weightKg: participants.weightKg,
       status: participants.status,
       registeredAt: participants.registeredAt,
@@ -413,7 +414,7 @@ async function participantsTable(
       "Email",
       "Mobile",
       "Age",
-      "Gender",
+      "Category",
       "Weight (kg)",
       "Status",
       "Registered",
@@ -426,7 +427,7 @@ async function participantsTable(
       r.email,
       r.mobile,
       r.age ?? "",
-      r.gender,
+      categoryLabel(r.category),
       r.weightKg ?? "",
       r.status,
       new Intl.DateTimeFormat("en-GB", {

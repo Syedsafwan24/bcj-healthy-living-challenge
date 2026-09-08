@@ -5,6 +5,10 @@ import type { SQL, SQLWrapper } from "drizzle-orm";
 
 import { db } from "@/db";
 import {
+  categoryGroupTitle,
+  categorySort,
+} from "@/lib/participant-categories";
+import {
   dailyEntries,
   dietCategories,
   finalScores,
@@ -129,7 +133,7 @@ export async function getParticipantProfile(participantId: string) {
       email: participants.email,
       mobile: participants.mobile,
       age: participants.age,
-      gender: participants.gender,
+      category: participants.category,
       areaOfResidence: participants.areaOfResidence,
       residenceStatus: participants.residenceStatus,
       heightCm: participants.heightCm,
@@ -183,7 +187,7 @@ export interface LeaderboardRow {
   displayName: string;
   finalScore: number;
   finalPercentage: number;
-  gender: string;
+  category: string;
   dietCategory: string | null;
   dietCode: string | null;
   dietSort: number;
@@ -191,17 +195,16 @@ export interface LeaderboardRow {
 
 /**
  * How the leaderboard is divided. "overall" is the single ranking V6 section
- * 9 defines; "gender" is the division BCJ awards prizes on.
+ * 9 defines; "category" is the division BCJ awards prizes on — male, female
+ * and kids, ranked separately.
  *
- * It was diet category and gender together until 5 September 2026. Weight
- * became optional at registration, so the category it derives from is often
+ * It was the diet category and gender together until 5 September 2026. Weight
+ * became optional at registration, so the diet band it derives from is often
  * absent, and grouping by it meant a "No diet category assigned" division that
- * was not a prize class at all. Gender is asked of everyone, so every
- * participant lands somewhere real. (The diet score itself is back since
- * 7 September, but it is scored per meal and never per category, so this
- * reasoning is unaffected.)
+ * was not a prize class at all. The competition category is asked of everyone,
+ * so every participant lands somewhere real.
  */
-export type LeaderboardSegment = "overall" | "gender";
+export type LeaderboardSegment = "overall" | "category";
 
 export interface LeaderboardGroup {
   key: string;
@@ -225,7 +228,7 @@ export async function getLeaderboard(): Promise<LeaderboardRow[]> {
     .select({
       participantId: participants.id,
       displayName: participants.displayName,
-      gender: participants.gender,
+      category: participants.category,
       dietCategory: dietCategories.title,
       dietCode: dietCategories.code,
       dietSort: dietCategories.sortOrder,
@@ -245,7 +248,7 @@ export async function getLeaderboard(): Promise<LeaderboardRow[]> {
       displayName: r.displayName,
       finalScore: Number(r.finalScore),
       finalPercentage: Number(r.finalPercentage),
-      gender: r.gender,
+      category: r.category,
       dietCategory: r.dietCategory,
       dietCode: r.dietCode,
       dietSort: r.dietSort ?? 99,
@@ -289,19 +292,21 @@ export function groupLeaderboard(
     return [{ key: "overall", title: "Overall", rows }];
   }
 
-  // Men and women are never ranked against each other. Every participant
-  // gives a gender at registration, so both divisions are always real.
+  // The three categories are never ranked against each other, which is the
+  // point of them: a 14-year-old should not have to beat grown men to place.
+  // Every participant picks exactly one at registration, so nobody is missing
+  // from the board and nobody appears on it twice.
   const buckets = new Map<
     string,
     { title: string; sort: number; rows: LeaderboardRow[] }
   >();
 
   for (const row of rows) {
-    const key = row.gender;
+    const key = row.category;
     if (!buckets.has(key)) {
       buckets.set(key, {
-        title: row.gender === "male" ? "Men" : "Women",
-        sort: row.gender === "male" ? 0 : 1,
+        title: categoryGroupTitle(row.category),
+        sort: categorySort(row.category),
         rows: [],
       });
     }
@@ -325,7 +330,7 @@ export function groupLeaderboard(
  * by `rank()` above, so sorting a division by name yields ranks like 7, 2, 15 —
  * the rank column keeps meaning "position by score", which is what an organiser
  * scanning for one person needs. If sorting re-ranked, the prize-deciding
- * category-and-gender divisions would silently report the wrong winners.
+ * category divisions would silently report the wrong winners.
  *
  * Rank ascending is the canonical order and is a pass-through, so a URL with no
  * sort renders exactly as it did before sorting existed.
@@ -488,7 +493,7 @@ export async function listParticipants(filter: ParticipantListFilter = {}) {
       email: participants.email,
       mobile: participants.mobile,
       age: participants.age,
-      gender: participants.gender,
+      category: participants.category,
       weightKg: participants.weightKg,
       areaOfResidence: participants.areaOfResidence,
       status: participants.status,

@@ -4,6 +4,7 @@ import { asc } from "drizzle-orm";
 
 import { db } from "@/db";
 import { dietCategories, type DietCategory } from "@/db/schema";
+import { KIDS_MAX_AGE, KIDS_MIN_AGE } from "@/lib/participant-categories";
 
 /**
  * Diet categories — V5 section 6, open item O-11.
@@ -17,8 +18,7 @@ import { dietCategories, type DietCategory } from "@/db/schema";
  * adult band and the assignment is flagged for an admin to confirm.
  */
 
-export const KIDS_MIN_AGE = 10;
-export const KIDS_MAX_AGE = 17;
+export { KIDS_MIN_AGE, KIDS_MAX_AGE };
 
 export async function listDietCategories(): Promise<DietCategory[]> {
   return db.select().from(dietCategories).orderBy(asc(dietCategories.sortOrder));

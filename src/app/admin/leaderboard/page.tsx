@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { requireAdmin } from "@/lib/auth/guards";
+import { categoryLabel } from "@/lib/participant-categories";
 import {
   getLeaderboard,
   groupLeaderboard,
@@ -29,20 +30,20 @@ export const dynamic = "force-dynamic";
  * `/admin/leaderboard` — the same ranking participants see, so an organiser
  * can check standings without signing in as someone.
  *
- * The overall division is the ranking V6 section 9 defines. The diet-category
- * and gender divisions are additions BCJ asked for; neither source document
- * divides the leaderboard, and because every day is scored as a percentage of
- * its own maximum no division is advantaged.
+ * The overall division is the ranking V6 section 9 defines. The category
+ * divisions — male, female and kids — are an addition BCJ asked for; neither
+ * source document divides the leaderboard, and because every day is scored as
+ * a percentage of its own maximum no division is advantaged.
  *
  * Full names are shown here, which the participant-facing board does not do.
  * This screen is behind an organiser session, and identifying two people who
  * chose similar display names is exactly what an organiser needs.
  */
 
-// Men and women is the default: it is the division BCJ awards prizes on.
+// By category is the default: it is the division BCJ awards prizes on.
 // Overall stays available as the single ranking V6 section 9 defines.
 const SEGMENTS: Array<{ value: LeaderboardSegment; label: string }> = [
-  { value: "gender", label: "Men and women" },
+  { value: "category", label: "By category" },
   { value: "overall", label: "Overall" },
 ];
 
@@ -57,7 +58,7 @@ export default async function AdminLeaderboardPage({
 
   const segment: LeaderboardSegment = SEGMENTS.some((s) => s.value === params.by)
     ? (params.by as LeaderboardSegment)
-    : "gender";
+    : "category";
 
   const rows = await getLeaderboard();
   const groups = groupLeaderboard(rows, segment);
@@ -89,7 +90,7 @@ export default async function AdminLeaderboardPage({
           >
             <Link
               href={
-                option.value === "gender"
+                option.value === "category"
                   ? "/admin/leaderboard"
                   : `/admin/leaderboard?by=${option.value}`
               }
@@ -122,9 +123,9 @@ export default async function AdminLeaderboardPage({
       )}
 
       <p className="text-sm leading-relaxed text-muted-foreground">
-        {segment === "gender"
-          ? "Prizes are decided on these divisions: men and women are ranked separately, each from 1. Only active participants appear; anyone on hold is excluded."
-          : "Overall is the single ranking the challenge rules define. Prizes are decided on the men and women divisions. Only active participants appear; anyone on hold is excluded."}
+        {segment === "category"
+          ? "Prizes are decided on these divisions: male, female and kids are ranked separately, each from 1. Only active participants appear; anyone on hold is excluded."
+          : "Overall is the single ranking the challenge rules define. Prizes are decided on the category divisions. Only active participants appear; anyone on hold is excluded."}
       </p>
     </div>
   );
@@ -180,7 +181,7 @@ function AdminLeaderboardTable({
                 <TableCell>
                   <p className="font-medium">{row.displayName}</p>
                   <p className="text-xs text-muted-foreground">
-                    {row.gender === "male" ? "Male" : "Female"}
+                    {categoryLabel(row.category)}
                   </p>
                 </TableCell>
                 <TableCell className="tabular text-right font-semibold">

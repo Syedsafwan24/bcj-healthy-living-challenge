@@ -38,7 +38,7 @@ export const dynamic = "force-dynamic";
  * sign-in codes (specification section 2.2).
  *
  * The overall ranking is the one the specification defines. The diet-category
- * and gender views are additions BCJ asked for: neither document divides the
+ * and category views are additions BCJ asked for: neither document divides the
  * leaderboard, and V5 section 6 describes the categories as differing "food
  * and portion guidance" rather than competition classes. Because every day is
  * scored as a percentage of its own maximum, no category is advantaged, so
@@ -48,10 +48,10 @@ export const dynamic = "force-dynamic";
  * gold-500 measures 2.38:1 and fails (section 9.2).
  */
 
-// Men and women is the default: it is the division BCJ awards prizes on.
+// By category is the default: it is the division BCJ awards prizes on.
 // Overall stays available as the single ranking V6 section 9 defines.
 const SEGMENTS: Array<{ value: LeaderboardSegment; label: string }> = [
-  { value: "gender", label: "Men and women" },
+  { value: "category", label: "By category" },
   { value: "overall", label: "Overall" },
 ];
 
@@ -70,7 +70,7 @@ export default async function LeaderboardPage({
 
   const segment: LeaderboardSegment = SEGMENTS.some((s) => s.value === params.by)
     ? (params.by as LeaderboardSegment)
-    : "gender";
+    : "category";
 
   const rows = await getLeaderboard();
   const groups = groupLeaderboard(rows, segment);
@@ -101,7 +101,7 @@ export default async function LeaderboardPage({
           >
             <Link
               href={
-                option.value === "gender"
+                option.value === "category"
                   ? "/app/leaderboard"
                   : `/app/leaderboard?by=${option.value}`
               }

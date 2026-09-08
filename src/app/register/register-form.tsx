@@ -17,6 +17,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  CATEGORY_OPTIONS,
+  KIDS_MAX_AGE,
+} from "@/lib/participant-categories";
 import { bloodGroups, diabetesOptions } from "@/lib/validation";
 
 import { registerParticipant, type RegisterResult } from "./actions";
@@ -136,14 +140,23 @@ export function RegisterForm() {
             />
           </Field>
 
-          <Field id="gender" label="Gender" required error={errors.gender}>
-            <Select name="gender" required>
-              <SelectTrigger id="gender" className="h-11 w-full">
+          <Field
+            id="category"
+            label="Category"
+            required
+            error={errors.category}
+            hint={`Prizes are awarded in each category separately. Choose Kids if you are ${KIDS_MAX_AGE} or under.`}
+          >
+            <Select name="category" required>
+              <SelectTrigger id="category" className="h-11 w-full">
                 <SelectValue placeholder="Select" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="male">Male</SelectItem>
-                <SelectItem value="female">Female</SelectItem>
+                {CATEGORY_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </Field>
