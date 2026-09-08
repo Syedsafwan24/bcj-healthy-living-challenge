@@ -550,6 +550,7 @@ export async function listEntriesForDate(
       registrationId: participants.registrationId,
       fullName: participants.fullName,
       displayName: participants.displayName,
+      category: participants.category,
       entryId: dailyEntries.id,
       entryDate: dailyEntries.entryDate,
       weekNo: dailyEntries.weekNo,

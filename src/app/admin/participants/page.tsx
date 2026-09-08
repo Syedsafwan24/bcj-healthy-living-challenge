@@ -5,6 +5,7 @@ import type { Metadata } from "next";
 import { ListExport } from "@/components/list-export";
 import { RegistrationId } from "@/components/registration-id";
 import { StatusBadge } from "@/components/status-badge";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -17,6 +18,7 @@ import {
 } from "@/components/ui/table";
 import { requireAdmin } from "@/lib/auth/guards";
 import { formatDateTime } from "@/lib/dates";
+import { categoryLabel } from "@/lib/participant-categories";
 import { listParticipants } from "@/lib/queries";
 import { getSettings } from "@/lib/settings";
 import { cn } from "@/lib/utils";
@@ -123,6 +125,7 @@ export default async function ParticipantsPage({
               <TableHead className="hidden md:table-cell">
                 Registration ID
               </TableHead>
+              <TableHead className="hidden sm:table-cell">Category</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="hidden text-right xl:table-cell">
                 Final score
@@ -154,6 +157,11 @@ export default async function ParticipantsPage({
                   </TableCell>
                   <TableCell className="hidden md:table-cell">
                     <RegistrationId value={row.registrationId} size="sm" />
+                  </TableCell>
+                  <TableCell className="hidden sm:table-cell">
+                    <Badge variant="outline" className="font-normal">
+                      {categoryLabel(row.category)}
+                    </Badge>
                   </TableCell>
                   <TableCell>
                     <StatusBadge status={row.status} />

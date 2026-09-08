@@ -5,6 +5,7 @@ import type { Metadata } from "next";
 import { RegistrationId } from "@/components/registration-id";
 import { ScoreBar } from "@/components/score-ring";
 import { EntryStatusBadge } from "@/components/status-badge";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -24,6 +25,7 @@ import {
   weekNoFor,
   type IsoDate,
 } from "@/lib/dates";
+import { categoryLabel } from "@/lib/participant-categories";
 import { listEntriesForDate } from "@/lib/queries";
 import { dailyMaxForWeek, formatPoints } from "@/lib/scoring";
 import { competitionClock, getSettings } from "@/lib/settings";
@@ -143,6 +145,7 @@ export default async function EntriesPage({
               <TableHeader>
                 <TableRow>
                   <TableHead>Participant</TableHead>
+                  <TableHead className="hidden sm:table-cell">Category</TableHead>
                   <TableHead className="hidden md:table-cell">
                     Registration ID
                   </TableHead>
@@ -158,7 +161,7 @@ export default async function EntriesPage({
                 {rows.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={6}
+                      colSpan={7}
                       className="py-12 text-center text-muted-foreground"
                     >
                       No active participants yet.
@@ -177,6 +180,11 @@ export default async function EntriesPage({
                         <p className="text-xs text-muted-foreground">
                           {row.displayName}
                         </p>
+                      </TableCell>
+                      <TableCell className="hidden sm:table-cell">
+                        <Badge variant="outline" className="font-normal">
+                          {categoryLabel(row.category)}
+                        </Badge>
                       </TableCell>
                       <TableCell className="hidden md:table-cell">
                         <RegistrationId value={row.registrationId} size="sm" />
