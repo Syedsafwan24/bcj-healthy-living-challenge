@@ -168,10 +168,14 @@ function LeaderboardTable({
         <Table>
           <TableHeader>
             <TableRow>
+              {/* Every column but the name is a fixed width. Each division
+                  is its own table, so a column left to size itself would be
+                  as wide as that division's longest value and the divisions
+                  would not line up down the page. */}
               <TableHead className="w-16">Rank</TableHead>
               <TableHead>Participant</TableHead>
-              <TableHead className="text-right">Final score</TableHead>
-              <TableHead className="hidden text-right sm:table-cell">
+              <TableHead className="w-28 text-right">Final score</TableHead>
+              <TableHead className="hidden w-28 text-right sm:table-cell">
                 Percentage
               </TableHead>
             </TableRow>

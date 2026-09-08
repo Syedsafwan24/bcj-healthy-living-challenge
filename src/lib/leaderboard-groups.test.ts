@@ -145,6 +145,36 @@ suite("leaderboard divisions", () => {
     expect(groups.map((g: any) => g.title)).toEqual(["Male", "Female"]);
   });
 
+  it("gives everyone tied the same rank, and never 0", () => {
+    // Every participant starts a season on 0.0, so the first leaderboard of a
+    // challenge is entirely ties. A tie copies the rank above it, which has to
+    // be the rank already assigned — reading it from the unranked input gave
+    // the second of a tie rank 0.
+    const tied = [
+      row("Adil", "male", "A", 1, 0),
+      row("Bilal", "male", "A", 1, 0),
+      row("Cadir", "male", "A", 1, 0),
+    ];
+    const [male] = groupLeaderboard(tied, "category");
+    expect(male.rows.map((r: any) => r.rank)).toEqual([1, 1, 1]);
+  });
+
+  it("skips ranks after a tie, so 1, 2, 2, 4", () => {
+    const scores = [
+      row("Adil", "male", "A", 1, 900),
+      row("Bilal", "male", "A", 1, 800),
+      row("Cadir", "male", "A", 1, 800),
+      row("Danish", "male", "A", 1, 700),
+    ];
+    const [male] = groupLeaderboard(scores, "category");
+    expect(male.rows.map((r: any) => [r.displayName, r.rank])).toEqual([
+      ["Adil", 1],
+      ["Bilal", 2],
+      ["Cadir", 2],
+      ["Danish", 4],
+    ]);
+  });
+
   it("keeps everyone in one group when undivided", () => {
     const groups = groupLeaderboard(rows, "overall");
     expect(groups).toHaveLength(1);

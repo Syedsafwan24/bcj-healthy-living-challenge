@@ -262,16 +262,25 @@ export async function getLeaderboard(): Promise<LeaderboardRow[]> {
  * and the next rank skips accordingly — 1, 2, 2, 4.
  */
 function rank(rows: LeaderboardRow[]): LeaderboardRow[] {
-  return rows.map((row, index) => {
-    const previous = rows[index - 1];
-    return {
+  // Accumulated rather than mapped, because a tie copies the rank of the row
+  // above and that has to be the rank already *assigned*. Reading it from the
+  // input array instead gave every tied participant after the first a rank of
+  // 0, since callers hand this rows with rank 0 set. Everybody starts a season
+  // on 0.0, so the very first leaderboard of a challenge was all zeros.
+  const ranked: LeaderboardRow[] = [];
+
+  for (const [index, row] of rows.entries()) {
+    const previous = ranked[index - 1];
+    ranked.push({
       ...row,
       rank:
         previous && previous.finalScore === row.finalScore
           ? previous.rank
           : index + 1,
-    };
-  });
+    });
+  }
+
+  return ranked;
 }
 
 /**
