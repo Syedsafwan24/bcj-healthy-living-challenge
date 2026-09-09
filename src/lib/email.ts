@@ -85,28 +85,78 @@ function getLogo(): Buffer | null {
 }
 
 /**
- * BCJ's 90-day handout, attached to the registration email so a new
- * participant has the plan in hand from day one rather than needing to find
- * it on the site.
+ * The documents that go out with a registration email, so a new participant
+ * has everything in hand from day one rather than having to find it on the
+ * site.
  *
- * Read once and cached, the same as the logo. Missing is not fatal: the
- * registration ID is the thing that must arrive, so a handout that failed to
- * load is dropped rather than blocking the send.
+ * Read once and cached, the same as the logo. A missing file is not fatal:
+ * the registration ID is the thing that must arrive, so a document that
+ * failed to load is dropped and the email still goes. That silence is why
+ * next.config.ts names src/assets explicitly in outputFileTracingIncludes —
+ * without it a build can leave the PDFs behind and nobody would notice until
+ * a participant asked where their plan was.
  */
-const HANDOUT_FILENAME = "BCJ Healthy Living Challenge - 90 Day Handout.pdf";
-let handoutBuffer: Buffer | null | undefined;
+const REGISTRATION_DOCUMENTS = [
+  {
+    source: "src/assets/bcj-90-day-handout.pdf",
+    filename: "BCJ Healthy Living Challenge - 90 Day Handout.pdf",
+    /** How it is referred to in the body of the email. */
+    label: "90-day handout",
+  },
+  {
+    source: "src/assets/bcj-diet-plan.pdf",
+    filename: "BCJ Healthy Living Challenge - Diet Plan.pdf",
+    label: "diet plan",
+  },
+] as const;
 
-function getHandout(): Buffer | null {
-  if (handoutBuffer !== undefined) return handoutBuffer;
+const documentCache = new Map<string, Buffer | null>();
+
+function readDocument(source: string): Buffer | null {
+  const cached = documentCache.get(source);
+  if (cached !== undefined) return cached;
+
+  let buffer: Buffer | null;
   try {
-    handoutBuffer = readFileSync(
-      join(process.cwd(), "src/assets/bcj-90-day-handout.pdf"),
-    );
+    buffer = readFileSync(join(process.cwd(), source));
   } catch (error) {
-    console.error("[email] 90-day handout not found, sending without it", error);
-    handoutBuffer = null;
+    console.error(`[email] ${source} not found, sending without it`, error);
+    buffer = null;
   }
-  return handoutBuffer;
+  documentCache.set(source, buffer);
+  return buffer;
+}
+
+interface RegistrationDocuments {
+  attachments: Attachment[];
+  /** "Your 90-day handout and diet plan are attached to this email." */
+  sentence: string | null;
+}
+
+function getRegistrationDocuments(): RegistrationDocuments {
+  const found = REGISTRATION_DOCUMENTS.map((doc) => ({
+    doc,
+    content: readDocument(doc.source),
+  })).filter((entry): entry is { doc: (typeof REGISTRATION_DOCUMENTS)[number]; content: Buffer } =>
+    entry.content !== null,
+  );
+
+  if (found.length === 0) return { attachments: [], sentence: null };
+
+  const labels = found.map((entry) => entry.doc.label);
+  // "a and b", or "a, b and c" — the list is short and read by a person.
+  const list =
+    labels.length === 1
+      ? labels[0]
+      : `${labels.slice(0, -1).join(", ")} and ${labels[labels.length - 1]}`;
+
+  return {
+    attachments: found.map((entry) => ({
+      filename: entry.doc.filename,
+      content: entry.content,
+    })),
+    sentence: `Your ${list} ${labels.length === 1 ? "is" : "are"} attached to this email.`,
+  };
 }
 
 async function send(message: Message): Promise<{ sent: boolean; id?: string }> {
@@ -245,13 +295,12 @@ export async function sendRegistrationId(params: {
   registrationId: string;
 }) {
   const url = `${env.appUrl}/login`;
-  const handout = getHandout();
+  const documents = getRegistrationDocuments();
   return send({
     to: params.to,
     subject: `Your BCJ Challenge registration ID — ${params.registrationId}`,
-    attachments: handout
-      ? [{ filename: HANDOUT_FILENAME, content: handout }]
-      : undefined,
+    attachments:
+      documents.attachments.length > 0 ? documents.attachments : undefined,
     text: [
       `As-salamu alaykum ${params.fullName},`,
       "",
@@ -263,7 +312,7 @@ export async function sendRegistrationId(params: {
       `Sign in at ${url}`,
       "",
       `If several people registered from this address, each has their own ID and signs in separately.`,
-      ...(handout ? ["", `Your 90-day handout is attached to this email.`] : []),
+      ...(documents.sentence ? ["", documents.sentence] : []),
     ].join("\n"),
     html: layout(
       `As-salamu alaykum ${escapeHtml(params.fullName)}`,
@@ -271,8 +320,8 @@ export async function sendRegistrationId(params: {
        ${idBlock(escapeHtml(params.registrationId))}
        <p style="margin:0 0 20px;font-size:15px;line-height:1.6">This ID is how you sign in. There is no password, so keep it somewhere safe. You can sign in straight away — there is nothing to wait for. If several people registered from this address, each has their own ID and signs in separately.</p>
        <p style="margin:0"><a href="${url}" style="background:${ACCENT};color:#ffffff;text-decoration:none;padding:12px 20px;border-radius:10px;display:inline-block;font-weight:600">Sign in</a></p>${
-         handout
-           ? `<p style="margin:20px 0 0;font-size:13px;color:#4E5C56">Your 90-day handout is attached to this email.</p>`
+         documents.sentence
+           ? `<p style="margin:20px 0 0;font-size:13px;color:#4E5C56">${escapeHtml(documents.sentence)}</p>`
            : ""
        }`,
     ),

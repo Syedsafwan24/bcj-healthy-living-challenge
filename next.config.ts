@@ -28,6 +28,20 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   serverExternalPackages: ["@node-rs/argon2", "exceljs"],
+  /**
+   * The registration email attaches the 90-day handout and the diet plan,
+   * read from src/assets at run time. Next traces files it can see being
+   * required, and a readFileSync built from process.cwd() and a string is not
+   * something it can follow — so without naming them here a build can ship
+   * without the PDFs.
+   *
+   * It fails quietly if it does: lib/email.ts logs and sends the email
+   * anyway, because a missing attachment must never stop a registration ID
+   * arriving. Quiet is exactly why this is stated rather than assumed.
+   */
+  outputFileTracingIncludes: {
+    "/**": ["./src/assets/*.pdf"],
+  },
   async headers() {
     return [
       { source: "/:path*", headers: securityHeaders },
