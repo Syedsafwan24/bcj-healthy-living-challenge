@@ -140,7 +140,6 @@ export async function getParticipantProfile(participantId: string) {
       weightKg: participants.weightKg,
       startingWeightKg: participants.startingWeightKg,
       status: participants.status,
-      reminderEmails: participants.reminderEmails,
       registeredAt: participants.registeredAt,
       dietCategoryId: participants.dietCategoryId,
       dietCode: dietCategories.code,

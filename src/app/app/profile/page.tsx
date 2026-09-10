@@ -109,7 +109,6 @@ export default async function ProfilePage() {
               mobile: profile.mobile,
               age: profile.age,
               weightKg: profile.weightKg,
-              reminderEmails: profile.reminderEmails,
             }}
           />
         </CardContent>
@@ -120,9 +119,9 @@ export default async function ProfilePage() {
           <CardHeader>
             <CardTitle className="text-lg">Reminders</CardTitle>
             <p className="text-sm text-muted-foreground">
-              A nudge in the evening if the day is still empty. Email is set
-              above; this switch is for notifications on the device you are
-              reading this on.
+              A nudge in the evening if the day is still empty, on the device
+              you are reading this on. It is the only reminder the challenge
+              sends.
             </p>
           </CardHeader>
           <CardContent>

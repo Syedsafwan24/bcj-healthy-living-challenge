@@ -3,7 +3,6 @@ import { and, eq, inArray, ne } from "drizzle-orm";
 
 import { db } from "@/db";
 import { dailyEntries, participants } from "@/db/schema";
-import { sendDailyReminder } from "@/lib/email";
 import { env } from "@/lib/env";
 import { formatIsoDateLong, type IsoDate } from "@/lib/dates";
 import {
@@ -12,26 +11,30 @@ import {
   entryBlocks,
 } from "@/lib/entry-blocks";
 import { sendPushToParticipants } from "@/lib/push";
-import { countEmptyDaysInRange, getMissedDays } from "@/lib/queries";
 import { competitionClock, getSettings } from "@/lib/settings";
 
 /**
  * The evening reminder.
  *
- * One run a day, a few hours before the cutoff, emailing the participants
+ * One run a day, a few hours before the cutoff, notifying the participants
  * who have not filled in today. It is deliberately separate from the nightly
  * job: that one runs *after* the cutoff and closes the day, which is far too
  * late to be useful as a nudge, and a job that scores days should not also be
- * the job that sends mail — a mail failure must never leave scoring half
- * done.
+ * the job that sends notifications — a delivery failure must never leave
+ * scoring half done.
+ *
+ * It nudges by browser notification only. BCJ dropped the daily reminder
+ * email (10 September 2026): a message every evening for twelve weeks is how
+ * a sending domain ends up in spam folders, and it would have taken the
+ * registration mail with it.
  *
  * Nobody who has already filled in today hears from it, so keeping up means
  * silence. Nothing is sent before the challenge starts or after it ends.
  *
  * During a four-week block's catch-up week it changes its tune. Those days
  * stop being fixable when the deadline passes, so the reminder leads with the
- * deadline and the participant's own count of empty days in that block — the
- * one night it is worth interrupting somebody who is otherwise up to date.
+ * deadline — the one night it is worth interrupting somebody who is otherwise
+ * up to date.
  */
 
 export const dynamic = "force-dynamic";
@@ -42,9 +45,6 @@ interface ReminderResult {
   today: string;
   weekNo: number | null;
   candidates: number;
-  /** Emails. */
-  sent: number;
-  failed: number;
   /** Browser notifications, counted per device rather than per person. */
   pushed: number;
   pushFailed: number;
@@ -54,11 +54,6 @@ interface ReminderResult {
   message?: string;
 }
 
-/**
- * Sent one at a time rather than as one message with many recipients: a
- * reminder names the participant and counts their own empty days, and a
- * shared To line would disclose every participant's address to every other.
- */
 async function runReminder(): Promise<ReminderResult> {
   const settings = await getSettings();
   const clock = competitionClock(settings);
@@ -68,8 +63,6 @@ async function runReminder(): Promise<ReminderResult> {
     today: clock.today,
     weekNo: clock.currentWeek,
     candidates: 0,
-    sent: 0,
-    failed: 0,
     pushed: 0,
     pushFailed: 0,
     pushRemoved: 0,
@@ -82,15 +75,10 @@ async function runReminder(): Promise<ReminderResult> {
     return { ...base, message: "The challenge is not running." };
   }
 
-  // Everyone still competing. The email opt-out is applied further down
-  // rather than here: it governs email only, and somebody who turned email
-  // off but allowed notifications should still get the notification.
+  // Everyone still competing.
   const people = await db
     .select({
       id: participants.id,
-      email: participants.email,
-      fullName: participants.fullName,
-      reminderEmails: participants.reminderEmails,
     })
     .from(participants)
     .where(eq(participants.status, "active"));
@@ -131,57 +119,8 @@ async function runReminder(): Promise<ReminderResult> {
     : 0;
   if (closingBlock) base.closingBlock = closingBlock.label;
 
-  if (env.smtpConfigured) {
-    for (const person of outstanding.filter((p) => p.reminderEmails)) {
-      try {
-        const missed = await getMissedDays(settings, person.id, clock.today);
-        // Counted per person: a deadline warning that names a number has to
-        // name that participant's own number, or it is ignored by the people
-        // who are up to date and disbelieved by the people who are not.
-        const blockEmpty =
-          closingBlock && closingBlock.closesAfter
-            ? await countEmptyDaysInRange(
-                person.id,
-                closingBlock.firstDay,
-                closingBlock.lastDay,
-                clock.today,
-              )
-            : 0;
-
-        const delivery = await sendDailyReminder({
-          to: person.email,
-          firstName: person.fullName.trim().split(/\s+/)[0] || "there",
-          weekNo: clock.currentWeek ?? 1,
-          emptyDays: missed.count,
-          deadline:
-            closingBlock && closingBlock.closesAfter
-              ? {
-                  label: closingBlock.label,
-                  closesOn: formatIsoDateLong(
-                    closingBlock.closesAfter as IsoDate,
-                  ),
-                  emptyDays: blockEmpty,
-                  daysLeft,
-                }
-              : undefined,
-        });
-        if (delivery.sent) base.sent += 1;
-        else base.failed += 1;
-      } catch (error) {
-        // One bad address must not stop the rest of the roster being reminded.
-        base.failed += 1;
-        console.error("[cron] reminder failed for one participant", error);
-      }
-    }
-  } else {
-    base.message = "SMTP is not configured, so no email was sent.";
-  }
-
-  // The same nudge to any device that has allowed notifications. It goes to
-  // everyone outstanding, including those who turned email off: the two are
-  // separate choices, and somebody who wants only the notification should get
-  // only the notification. It carries no score, because a notification is
-  // readable on a locked screen.
+  // The nudge goes to any device that has allowed notifications. It carries
+  // no score, because a notification is readable on a locked screen.
   const push = await sendPushToParticipants(
     outstanding.map((p) => p.id),
     closingBlock && closingBlock.closesAfter

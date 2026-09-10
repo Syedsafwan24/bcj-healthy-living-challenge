@@ -32,7 +32,7 @@ export interface ProfileActionState {
   message?: string;
 }
 
-const TRACKED = ["mobile", "age", "weightKg", "reminderEmails"];
+const TRACKED = ["mobile", "age", "weightKg"];
 
 export async function updateMyDetails(
   _prev: ProfileActionState | null,
@@ -66,7 +66,6 @@ export async function updateMyDetails(
       mobile: values.mobile,
       age: values.age ?? null,
       weightKg: values.weightKg != null ? String(values.weightKg) : null,
-      reminderEmails: values.reminderEmails,
     })
     .where(eq(participants.id, session.participantId))
     .returning();

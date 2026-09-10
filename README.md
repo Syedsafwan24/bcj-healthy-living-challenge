@@ -291,10 +291,10 @@ The nightly job locks each block as its deadline passes. Blocks close in order,
 so it locks through the newest closed block's last day, which covers every
 earlier one and makes the job safe to run twice.
 
-Participants are warned for the whole of a catch-up week — on the day screen,
-in their history, and in the evening reminder, each naming that participant's
-own count of empty days in the block that is about to shut. That warning is the
-only one anybody gets.
+Participants are warned for the whole of a catch-up week — on the day screen
+and in their history, each naming that participant's own count of empty days in
+the block that is about to shut, and by the evening notification, which names
+the deadline but no count. That warning is the only one anybody gets.
 
 ### The last block, and closing the competition
 
