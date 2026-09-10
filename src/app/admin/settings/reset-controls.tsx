@@ -37,12 +37,38 @@ import { RESET_PHRASE } from "./constants";
  * The button stays enabled until the phrase matches, rather than the dialog
  * refusing on submit, so the requirement is visible before anything is typed.
  */
-function ResetButton({ armed }: { armed: boolean }) {
+/**
+ * Enabled even before the phrase matches.
+ *
+ * It used to be disabled until the typed phrase was exact, which reads as a
+ * broken button: nothing explains why it will not press, and a browser that
+ * autofills the phrase box — see below — leaves an organiser clicking a dead
+ * control with no idea what is wrong. Pressing it now says what is missing,
+ * and the server refuses a wrong phrase anyway.
+ *
+ * The check is on the click rather than on the form's submit, because this is
+ * a Radix AlertDialogAction: it closes the dialog on click whatever the form
+ * does, so blocking only the submission would take the dialog away — along
+ * with the message explaining why nothing happened, and everything typed.
+ */
+function ResetButton({
+  armed,
+  onBlocked,
+}: {
+  armed: boolean;
+  onBlocked: () => void;
+}) {
   const { pending } = useFormStatus();
   return (
     <AlertDialogAction
       type="submit"
-      disabled={!armed || pending}
+      disabled={pending}
+      onClick={(event) => {
+        if (armed) return;
+        // Stops the submit and stops the dialog closing, in one.
+        event.preventDefault();
+        onBlocked();
+      }}
       className="bg-destructive text-white hover:bg-destructive/90"
     >
       {pending ? "Clearing…" : "Clear the competition"}
@@ -69,12 +95,23 @@ export function ResetControls({
   );
   const [confirm, setConfirm] = useState("");
   const [open, setOpen] = useState(false);
+  // The phrase box starts read-only. Chrome and Edge fill the first text
+  // input of any form containing a password with the saved username, and they
+  // ignore autocomplete="off" while doing it — which put an email address in
+  // the phrase box and left the button disabled. A read-only input is not
+  // filled, and it becomes writable the moment somebody means to type in it.
+  const [phraseReady, setPhraseReady] = useState(false);
+  const [phraseError, setPhraseError] = useState<string | null>(null);
+
+  const armed = confirm.trim() === RESET_PHRASE;
 
   useEffect(() => {
     if (state?.ok && state.message) {
       toast.success(state.message, { duration: 10_000 });
       setOpen(false);
       setConfirm("");
+      setPhraseReady(false);
+      setPhraseError(null);
     } else if (state?.error) {
       // Long, because a failure here names what the database refused.
       toast.error(state.error, { duration: 20_000 });
@@ -197,14 +234,24 @@ export function ResetControls({
                   id="reset-confirm"
                   label={`Type ${RESET_PHRASE}`}
                   required
-                  error={state?.errors?.confirm}
+                  error={phraseError ?? state?.errors?.confirm}
+                  hint="Typed by hand, so this cannot be done by accident."
                 >
                   <Input
                     id="reset-confirm"
                     name="confirm"
                     value={confirm}
-                    onChange={(event) => setConfirm(event.target.value)}
+                    readOnly={!phraseReady}
+                    onFocus={() => setPhraseReady(true)}
+                    onChange={(event) => {
+                      setConfirm(event.target.value);
+                      setPhraseError(null);
+                    }}
                     autoComplete="off"
+                    // Honoured by 1Password and LastPass; the browsers' own
+                    // managers are handled by readOnly above.
+                    data-1p-ignore
+                    data-lpignore="true"
                     spellCheck={false}
                     placeholder={RESET_PHRASE}
                     className="h-11 font-mono"
@@ -264,7 +311,16 @@ export function ResetControls({
 
               <AlertDialogFooter>
                 <AlertDialogCancel type="button">Cancel</AlertDialogCancel>
-                <ResetButton armed={confirm.trim() === RESET_PHRASE} />
+                <ResetButton
+                  armed={armed}
+                  onBlocked={() =>
+                    setPhraseError(
+                      confirm.trim().length === 0
+                        ? `Type ${RESET_PHRASE} to confirm.`
+                        : `That is not the phrase. Type ${RESET_PHRASE} exactly.`,
+                    )
+                  }
+                />
               </AlertDialogFooter>
             </form>
           </AlertDialogContent>
