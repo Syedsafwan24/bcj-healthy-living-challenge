@@ -99,6 +99,12 @@ export default async function SettingsPage({
 
   const outstandingDays = Math.max(0, activeCount * elapsed - recordedDays);
 
+  // Everything on daily_entries, not only the elapsed window above: this is
+  // the number the season reset destroys, so it has to count the lot.
+  const [{ value: allRecordedDays }] = await db
+    .select({ value: count() })
+    .from(dailyEntries);
+
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <header className="flex flex-wrap items-start justify-between gap-3">
@@ -203,6 +209,8 @@ export default async function SettingsPage({
           <ResetControls
             requireTotp={env.adminRequireTotp}
             participantCount={participantCount}
+            recordedDays={allRecordedDays}
+            competitionClosed={clock.closed}
           />
         </>
       )}

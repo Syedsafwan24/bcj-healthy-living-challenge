@@ -53,9 +53,15 @@ function ResetButton({ armed }: { armed: boolean }) {
 export function ResetControls({
   requireTotp,
   participantCount,
+  recordedDays,
+  competitionClosed,
 }: {
   requireTotp: boolean;
   participantCount: number;
+  /** Daily records that will go with them. */
+  recordedDays: number;
+  /** The season has to be closed before it can be cleared. */
+  competitionClosed: boolean;
 }) {
   const [state, action] = useActionState<SettingsState | null, FormData>(
     resetCompetition,
@@ -70,7 +76,8 @@ export function ResetControls({
       setOpen(false);
       setConfirm("");
     } else if (state?.error) {
-      toast.error(state.error);
+      // Long, because a failure here names what the database refused.
+      toast.error(state.error, { duration: 20_000 });
     }
   }, [state]);
 
@@ -83,19 +90,53 @@ export function ResetControls({
         </CardTitle>
         <div className="space-y-3 text-sm leading-relaxed text-muted-foreground">
           <p>
-            Clears this year&apos;s competition so BCJ can run the next one on
-            the same site. It deletes{" "}
-            <strong className="text-foreground">
-              every participant, their daily entries, weekly scores, final
-              scores and health records
-            </strong>
-            , and sets registration numbering back to BCJ0001.
+            Empties the site so BCJ can run next year&apos;s challenge on it.
+            Everything from this season goes.
           </p>
-          <p>
-            Organiser accounts, diet categories and the audit history are kept.
-            The scoring rules are unlocked so next year&apos;s start date can be
-            set.
-          </p>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="rounded-lg border border-destructive/40 bg-destructive/5 p-3">
+              <p className="font-medium text-destructive">Deleted for ever</p>
+              <ul className="mt-2 space-y-1">
+                <li>
+                  <strong className="text-foreground">
+                    All {participantCount} participant
+                    {participantCount === 1 ? "" : "s"}
+                  </strong>{" "}
+                  &mdash; every registration, name, email and mobile number
+                </li>
+                <li>
+                  <strong className="text-foreground">
+                    All {recordedDays.toLocaleString()} recorded day
+                    {recordedDays === 1 ? "" : "s"}
+                  </strong>{" "}
+                  &mdash; every answer anybody gave
+                </li>
+                <li>Every weekly score, final score and leaderboard position</li>
+                <li>
+                  Health records: blood group, blood pressure, diabetes status
+                  and blood sugar
+                </li>
+                <li>
+                  Everyone&apos;s sign-in, so no participant can log in again
+                </li>
+              </ul>
+            </div>
+
+            <div className="rounded-lg border p-3">
+              <p className="font-medium text-foreground">Kept</p>
+              <ul className="mt-2 space-y-1">
+                <li>Organiser accounts, including yours</li>
+                <li>The diet categories and their plans</li>
+                <li>The audit history, with this deletion recorded in it</li>
+              </ul>
+              <p className="mt-2">
+                Registration numbering restarts at BCJ0001 and the scoring rules
+                unlock, ready for next year&apos;s start date.
+              </p>
+            </div>
+          </div>
+
           <p className="font-medium text-destructive">
             There is no undo. Export the results first, and make sure you have a
             database backup you have actually restored from before.
@@ -103,20 +144,33 @@ export function ResetControls({
         </div>
       </CardHeader>
 
-      <CardContent>
+      <CardContent className="space-y-3">
+        {!competitionClosed && (
+          <p className="rounded-lg border bg-muted/40 p-3 text-sm leading-relaxed text-muted-foreground">
+            <strong className="text-foreground">
+              Close the competition first.
+            </strong>{" "}
+            The season has to be finished before it can be cleared &mdash;
+            otherwise this would delete days participants are still allowed to
+            fill in. Use the card above.
+          </p>
+        )}
+
         <AlertDialog open={open} onOpenChange={setOpen}>
           <AlertDialogTrigger asChild>
             <Button
               variant="outline"
               className="h-11 border-destructive/50 text-destructive hover:bg-destructive/10"
-              disabled={participantCount === 0}
+              disabled={participantCount === 0 || !competitionClosed}
               title={
                 participantCount === 0
                   ? "There are no participants to clear."
-                  : undefined
+                  : !competitionClosed
+                    ? "Close the competition first."
+                    : undefined
               }
             >
-              Clear competition records
+              Delete everything and start a new season
             </Button>
           </AlertDialogTrigger>
 
@@ -124,12 +178,15 @@ export function ResetControls({
             <form action={action}>
               <AlertDialogHeader>
                 <AlertDialogTitle>
-                  Delete {participantCount} participant
-                  {participantCount === 1 ? "" : "s"} and everything they
-                  recorded?
+                  Delete all {participantCount} participant
+                  {participantCount === 1 ? "" : "s"} and all{" "}
+                  {recordedDays.toLocaleString()} recorded day
+                  {recordedDays === 1 ? "" : "s"}?
                 </AlertDialogTitle>
                 <AlertDialogDescription>
-                  This cannot be undone. Confirm with your own password
+                  Every registration, every answer, every score and every health
+                  record from this season is deleted for ever. This cannot be
+                  undone. Confirm with your own password
                   {requireTotp ? " and authenticator code" : ""}, and type the
                   phrase exactly.
                 </AlertDialogDescription>

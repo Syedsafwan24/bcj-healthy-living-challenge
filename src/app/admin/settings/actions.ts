@@ -46,6 +46,23 @@ export interface SettingsState {
   message?: string;
 }
 
+/**
+ * The sentence a database error is actually worth showing.
+ *
+ * Drizzle wraps the driver error in one that reads "Failed query: SELECT ..."
+ * and hides the reason underneath, so an organiser would be shown the SQL and
+ * not the refusal. The cause carries the useful line — "permission denied for
+ * sequence participant_seq" — which names the fix.
+ */
+function databaseReason(error: unknown): string {
+  const cause = (error as { cause?: unknown } | null)?.cause;
+  const message =
+    (cause as { message?: string } | undefined)?.message ??
+    (error as { message?: string } | null)?.message ??
+    String(error);
+  return message.replace(/\s+/g, " ").trim().slice(0, 200);
+}
+
 /** Changing any of these moves everyone's score, so they recompute. */
 const SCORING_FIELDS = ["startDate", "totalWeeks", "maxActiveWeek"];
 
@@ -490,6 +507,11 @@ export async function reopenCompetition(
  * The scoring rules are unlocked, because the next thing anyone does after
  * this is set next year's start date, which rules_locked forbids.
  *
+ * Only offered once the competition is closed. Clearing a running season
+ * would delete days people are still filling in, and the results with them,
+ * with nothing to say it had happened; closing first at least makes the end
+ * of the season a decision taken twice.
+ *
  * Guarded by re-authentication and a typed phrase. There is no undo, so the
  * only real protection is a restorable database backup — the UI says so.
  */
@@ -498,6 +520,17 @@ export async function resetCompetition(
   formData: FormData,
 ): Promise<SettingsState> {
   const admin = await requireAdmin();
+
+  // Close the season before clearing it. Enforced here and not only by the
+  // disabled button, so a stale page cannot get past it either.
+  const settingsRow = await getSettings();
+  if (settingsRow.closedAt === null) {
+    return {
+      ok: false,
+      error:
+        "Close the competition first. Clearing a season that is still open would delete days people can still fill in.",
+    };
+  }
 
   if (String(formData.get("confirm") ?? "").trim() !== RESET_PHRASE) {
     return {
@@ -557,29 +590,53 @@ export async function resetCompetition(
     ip,
   });
 
-  await db.transaction(async (tx) => {
-    // audit_log.actor_participant_id references participants without a
-    // cascade, so the history is detached rather than blocking the delete.
-    await tx
-      .update(auditLog)
-      .set({ actorParticipantId: null })
-      .where(sql`${auditLog.actorParticipantId} IS NOT NULL`);
+  try {
+    await db.transaction(async (tx) => {
+      // audit_log.actor_participant_id references participants without a
+      // cascade, so the history is detached rather than blocking the delete.
+      await tx
+        .update(auditLog)
+        .set({ actorParticipantId: null })
+        .where(sql`${auditLog.actorParticipantId} IS NOT NULL`);
 
-    // Health records, daily entries, weekly and final scores and participant
-    // sessions all cascade from this one delete.
-    await tx.delete(participants);
+      // Health records, daily entries, weekly and final scores and participant
+      // sessions all cascade from this one delete.
+      await tx.delete(participants);
 
-    // Next year starts at BCJ0001 again.
-    await tx.execute(sql`SELECT setval('participant_seq', 1, false)`);
+      // Next year starts at BCJ0001 again. This needs UPDATE on the sequence,
+      // which src/db/grants.sql grants — a database still on the older grants
+      // refuses it, and refuses the whole transaction with it.
+      await tx.execute(sql`SELECT setval('participant_seq', 1, false)`);
 
-    // The next thing anyone does is set next year's start date, and next
-    // year's competition has to start open rather than inheriting the closure
-    // that ended the last one.
-    await tx
-      .update(settings)
-      .set({ rulesLocked: false, closedAt: null })
-      .where(eq(settings.id, 1));
-  });
+      // The next thing anyone does is set next year's start date, and next
+      // year's competition has to start open rather than inheriting the closure
+      // that ended the last one.
+      await tx
+        .update(settings)
+        .set({ rulesLocked: false, closedAt: null })
+        .where(eq(settings.id, 1));
+    });
+  } catch (error) {
+    // Without this the whole action rejects and the screen says nothing at
+    // all: the organiser presses the button, the dialog sits there, and the
+    // records are still present with no explanation. One transaction, so
+    // nothing was deleted — say that, and say what the database refused.
+    console.error("[settings] competition reset failed", error);
+    await recordAudit({
+      action: "competition.reset",
+      entityType: "settings",
+      actorAdminId: admin.adminId,
+      newValue: "failed; nothing was deleted",
+      reason: databaseReason(error),
+      ip,
+    });
+    return {
+      ok: false,
+      error:
+        "The database refused the reset, so nothing was deleted — it runs as one transaction. " +
+        `Check that src/db/grants.sql has been applied. The database said: ${databaseReason(error)}`,
+    };
+  }
 
   await recordAudit({
     action: "competition.reset",
