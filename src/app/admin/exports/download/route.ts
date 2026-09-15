@@ -45,6 +45,7 @@ export async function POST(request: NextRequest) {
   // Carried from the filter bar on /admin/participants, so the file matches
   // the list the organiser was looking at.
   const statusRaw = String(form.get("status") ?? "");
+  const categoryRaw = String(form.get("category") ?? "");
   const searchRaw = String(form.get("q") ?? "").slice(0, 100);
 
   if (!KINDS.includes(kind) || !FORMATS.includes(format)) {
@@ -93,6 +94,7 @@ export async function POST(request: NextRequest) {
     to: isIsoDate(toRaw) ? (toRaw as IsoDate) : undefined,
     includeHealth,
     status: statusRaw || undefined,
+    category: categoryRaw || undefined,
     search: searchRaw || undefined,
   });
 
@@ -108,6 +110,7 @@ export async function POST(request: NextRequest) {
       from: fromRaw || null,
       to: toRaw || null,
       status: statusRaw || null,
+      category: categoryRaw || null,
       search: searchRaw || null,
     },
     ip,

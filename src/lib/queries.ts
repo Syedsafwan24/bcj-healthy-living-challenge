@@ -415,6 +415,8 @@ export async function getAdminOverview(row: Settings, today: IsoDate) {
 
 export interface ParticipantListFilter {
   status?: string;
+  /** "male" | "female" | "kids", or "all". */
+  category?: string;
   search?: string;
   limit?: number;
   offset?: number;
@@ -465,6 +467,49 @@ export function participantOrder(state: SortState<ParticipantSortKey>): SQL[] {
   return state.key === "seq" ? primary : [...primary, asc(participants.seqNo)];
 }
 
+/**
+ * How many participants are in each category, under the status and search
+ * filters currently applied but *not* the category filter.
+ *
+ * Deliberately blind to the category: these counts are the choices on offer,
+ * so filtering to Kids must not leave Male and Female reading zero. One
+ * grouped query rather than four counts, because a roster screen should not
+ * open four connections to answer one question.
+ */
+export async function countParticipantsByCategory(
+  filter: Pick<ParticipantListFilter, "status" | "search"> = {},
+): Promise<{ total: number; byCategory: Record<string, number> }> {
+  const conditions = [sql`true`];
+  if (filter.status && filter.status !== "all") {
+    conditions.push(sql`${participants.status} = ${filter.status}`);
+  }
+  if (filter.search) {
+    const term = `%${filter.search.toLowerCase()}%`;
+    conditions.push(sql`(
+      lower(${participants.fullName}) LIKE ${term}
+      OR lower(${participants.displayName}) LIKE ${term}
+      OR lower(${participants.email}::text) LIKE ${term}
+      OR lower(${participants.registrationId}) LIKE ${term}
+      OR ${participants.mobile} LIKE ${term}
+    )`);
+  }
+
+  const rows = await db
+    .select({ category: participants.category, value: count() })
+    .from(participants)
+    .where(sql.join(conditions, sql` AND `))
+    .groupBy(participants.category);
+
+  const byCategory: Record<string, number> = {};
+  let total = 0;
+  for (const row of rows) {
+    byCategory[row.category] = row.value;
+    total += row.value;
+  }
+
+  return { total, byCategory };
+}
+
 export async function listParticipants(filter: ParticipantListFilter = {}) {
   const limit = Math.min(filter.limit ?? 50, 200);
   const offset = filter.offset ?? 0;
@@ -478,6 +523,9 @@ export async function listParticipants(filter: ParticipantListFilter = {}) {
   const conditions = [sql`true`];
   if (filter.status && filter.status !== "all") {
     conditions.push(sql`${participants.status} = ${filter.status}`);
+  }
+  if (filter.category && filter.category !== "all") {
+    conditions.push(sql`${participants.category} = ${filter.category}`);
   }
   if (filter.search) {
     const term = `%${filter.search.toLowerCase()}%`;

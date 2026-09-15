@@ -31,10 +31,12 @@ const FORMATS = [
 export function ListExport({
   kind,
   status,
+  category,
   search,
 }: {
   kind: "participants";
   status?: string;
+  category?: string;
   search?: string;
 }) {
   const [busy, setBusy] = useState<string | null>(null);
@@ -48,6 +50,7 @@ export function ListExport({
       body.set("kind", kind);
       body.set("format", format);
       body.set("status", status ?? "");
+      body.set("category", category ?? "");
       body.set("q", search ?? "");
 
       const response = await fetch("/admin/exports/download", {
@@ -102,6 +105,7 @@ export function ListExport({
     >
       <input type="hidden" name="kind" value={kind} />
       <input type="hidden" name="status" value={status ?? ""} />
+      <input type="hidden" name="category" value={category ?? ""} />
       <input type="hidden" name="q" value={search ?? ""} />
 
       <span className="mr-1 text-sm text-muted-foreground">Export</span>

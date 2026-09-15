@@ -18,8 +18,11 @@ import {
 } from "@/components/ui/table";
 import { requireAdmin } from "@/lib/auth/guards";
 import { formatDateTime } from "@/lib/dates";
-import { categoryLabel } from "@/lib/participant-categories";
-import { listParticipants } from "@/lib/queries";
+import { CATEGORY_OPTIONS, categoryLabel } from "@/lib/participant-categories";
+import {
+  countParticipantsByCategory,
+  listParticipants,
+} from "@/lib/queries";
 import { getSettings } from "@/lib/settings";
 import { cn } from "@/lib/utils";
 
@@ -41,21 +44,48 @@ const PAGE_SIZE = 50;
 export default async function ParticipantsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; q?: string; page?: string }>;
+  searchParams: Promise<{
+    status?: string;
+    category?: string;
+    q?: string;
+    page?: string;
+  }>;
 }) {
   await requireAdmin();
   const settings = await getSettings();
   const params = await searchParams;
 
   const status = params.status ?? "all";
+  // Anything unrecognised falls back to "all", so a hand-typed query string
+  // cannot leave the screen showing an empty table with no explanation.
+  const category =
+    params.category &&
+    CATEGORY_OPTIONS.some((option) => option.value === params.category)
+      ? params.category
+      : "all";
   const search = params.q?.trim() ?? "";
   const page = Math.max(1, Number(params.page) || 1);
 
-  const { rows, total } = await listParticipants({
-    status,
-    search: search || undefined,
-    limit: PAGE_SIZE,
-    offset: (page - 1) * PAGE_SIZE,
+  const [{ rows, total }, counts] = await Promise.all([
+    listParticipants({
+      status,
+      category,
+      search: search || undefined,
+      limit: PAGE_SIZE,
+      offset: (page - 1) * PAGE_SIZE,
+    }),
+    // Counted without the category filter, so the cards keep offering the
+    // categories you are not currently looking at.
+    countParticipantsByCategory({ status, search: search || undefined }),
+  ]);
+
+  /** Keeps the other filters when one of them changes. */
+  const queryWith = (next: { status?: string; category?: string }) => ({
+    status: next.status ?? status,
+    ...(next.category ?? category) !== "all"
+      ? { category: next.category ?? category }
+      : {},
+    ...(search ? { q: search } : {}),
   });
 
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -67,13 +97,48 @@ export default async function ParticipantsPage({
           <h1 className="text-2xl font-semibold tracking-tight">Participants</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {total} record{total === 1 ? "" : "s"}
+            {category !== "all" ? ` in ${categoryLabel(category)}` : ""}
             {status !== "all" ? ` with status ${status}` : ""}
           </p>
         </div>
         {total > 0 && (
-          <ListExport kind="participants" status={status} search={search} />
+          <ListExport
+            kind="participants"
+            status={status}
+            category={category}
+            search={search}
+          />
         )}
       </header>
+
+      {/* ---- how the roster splits, and the filter for it ----
+          The cards are the filter rather than sitting beside one: a count you
+          cannot click is a count you then have to go and reproduce with a
+          separate control. The counts ignore the category filter itself, so
+          picking Kids still shows how many men and women there are. */}
+      <div className="grid grid-cols-4 gap-2 sm:gap-3">
+        <CategoryCard
+          label="All"
+          count={counts.total}
+          active={category === "all"}
+          href={{
+            pathname: "/admin/participants",
+            query: queryWith({ category: "all" }),
+          }}
+        />
+        {CATEGORY_OPTIONS.map((option) => (
+          <CategoryCard
+            key={option.value}
+            label={option.label}
+            count={counts.byCategory[option.value] ?? 0}
+            active={category === option.value}
+            href={{
+              pathname: "/admin/participants",
+              query: queryWith({ category: option.value }),
+            }}
+          />
+        ))}
+      </div>
 
       {/* ---- filters ---- */}
       <div className="flex flex-wrap items-center gap-3">
@@ -89,7 +154,7 @@ export default async function ParticipantsPage({
               <Link
                 href={{
                   pathname: "/admin/participants",
-                  query: { status: option.value, ...(search ? { q: search } : {}) },
+                  query: queryWith({ status: option.value }),
                 }}
               >
                 {option.label}
@@ -100,6 +165,9 @@ export default async function ParticipantsPage({
 
         <form className="flex flex-1 items-center gap-2" action="/admin/participants">
           <input type="hidden" name="status" value={status} />
+          {category !== "all" && (
+            <input type="hidden" name="category" value={category} />
+          )}
           <div className="relative min-w-52 flex-1">
             <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -223,3 +291,37 @@ export default async function ParticipantsPage({
   );
 }
 
+/**
+ * One count, and the link that filters by it.
+ *
+ * A link rather than a button so it works without JavaScript, keeps the
+ * filtered view shareable, and lets an organiser open a category in a new tab
+ * — the same reasoning as the leaderboard's divisions and the settings tabs.
+ */
+function CategoryCard({
+  label,
+  count,
+  active,
+  href,
+}: {
+  label: string;
+  count: number;
+  active: boolean;
+  href: React.ComponentProps<typeof Link>["href"];
+}) {
+  return (
+    <Link
+      href={href}
+      aria-current={active ? "page" : undefined}
+      className={cn(
+        "rounded-xl border bg-card p-3 transition-colors hover:bg-muted/60 sm:p-4",
+        active && "border-primary bg-secondary hover:bg-secondary",
+      )}
+    >
+      <p className="truncate text-xs text-muted-foreground sm:text-sm">
+        {label}
+      </p>
+      <p className="tabular mt-1 text-xl font-semibold sm:text-2xl">{count}</p>
+    </Link>
+  );
+}

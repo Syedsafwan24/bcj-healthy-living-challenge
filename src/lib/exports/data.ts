@@ -37,6 +37,7 @@ export interface ExportOptions {
   includeHealth?: boolean;
   /** Participants export: mirrors the filter on /admin/participants. */
   status?: string;
+  category?: string;
   search?: string;
 }
 
@@ -367,6 +368,9 @@ async function participantsTable(
   if (options.status && options.status !== "all") {
     conditions.push(sql`${participants.status} = ${options.status}`);
   }
+  if (options.category && options.category !== "all") {
+    conditions.push(sql`${participants.category} = ${options.category}`);
+  }
   if (options.search) {
     const term = `%${options.search.toLowerCase()}%`;
     conditions.push(sql`(
@@ -399,6 +403,9 @@ async function participantsTable(
 
   const filters = [
     options.status && options.status !== "all" ? `status: ${options.status}` : null,
+    options.category && options.category !== "all"
+      ? `category: ${options.category}`
+      : null,
     options.search ? `search: "${options.search}"` : null,
   ].filter(Boolean);
 
