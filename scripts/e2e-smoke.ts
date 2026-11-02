@@ -240,10 +240,10 @@ async function main() {
     'button[aria-label="Eat vegetables with your main meals: Dinner"]',
   );
 
-  // Sleep is 1 point per hour capped at 10, so 8 hours scores 8 of 10 and the
-  // day totals 98, not 100. The browser preview must agree with the server.
-  const preview = await pp.locator("text=/98 \\/ 100/").count();
-  check("the browser preview agrees with the server: 98 / 100", preview > 0);
+  // Sleep is 1.25 points per hour capped at 10, so 8 hours scores the full 10
+  // and the day totals 100. The browser preview must agree with the server.
+  const preview = await pp.locator("text=/100 \\/ 100/").count();
+  check("the browser preview agrees with the server: 100 / 100", preview > 0);
 
   await pp.click('button[type="submit"]:has-text("Save my day")');
   await pp.waitForTimeout(4000);
@@ -255,9 +255,9 @@ async function main() {
 
   check(
     "the server stores the score it calculated itself",
-    Number(entry?.dailyPoints) === 98 &&
+    Number(entry?.dailyPoints) === 100 &&
       entry?.maxPoints === 100 &&
-      Number(entry?.dailyPercentage) === 98,
+      Number(entry?.dailyPercentage) === 100,
     `${entry?.dailyPoints}/${entry?.maxPoints} = ${entry?.dailyPercentage}%`,
   );
   // Derived from the settings, not hardcoded: the competition moves on, and

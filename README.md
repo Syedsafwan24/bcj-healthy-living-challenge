@@ -136,7 +136,7 @@ row and recomputes `final_scores` — all three or none.
 ```
 weekNo           = floor(daysBetween(startDate, entryDate) / 7) + 1
 activeChallenges = C1 through C[min(weekNo, 9)]        cumulative
-quantitative     = min(floor(value / unit), 10)        water 0.25 L, steps 1,000, sleep 1 h
+quantitative     = min(floor(value / unit), 10)        water 0.25 L, steps 1,000, sleep 0.8 h
 yes/no           = Yes 10, No 0
 dietEarned       = 2 × occasions marked Yes            max 10, every day from week 1
 dailyPercentage  = (lifestyleEarned + dietEarned) / (activeChallenges × 10 + 10) × 100
@@ -366,7 +366,7 @@ the build specification records, and each is marked in the code where it bites.
 | O-11 | Diet categories | V5 section 6 five bands; under 50 kg flagged for review |
 | O-12 | Hosting location | Not decided — see the note on `/admin/exports` |
 | O-13 | Registration ID format | `BCJ0001-SYED` — name suffix, at BCJ's request. See the warning under "Access model" |
-| **O-14** | **C7 cannot be maxed at its stated target** — see below | Implemented as V6 states |
+| **O-14** | **C7 cannot be maxed at its stated target** — see below | Resolved 2 November 2026: 1.25 points per hour, 8 hours = 10 |
 
 ### O-14, raised during the build
 
@@ -378,10 +378,11 @@ The other two quantitative challenges do not behave this way: C1 tops out at
 2.5 L, inside its stated 2–3 L target, and C2 at 10,000 steps, the top of its
 8,000–10,000 range. Only sleep asks for more than the challenge sets out.
 
-The application implements the rule exactly as V6 states it. BCJ should decide
-whether that is intended, or whether the sleep rule should cap at the target —
-for example 1.25 points per hour, so 8 hours scores 10. Changing it is a
-one-line change to `unit` in `src/lib/challenges.ts` plus a test vector.
+Resolved 2 November 2026 at BCJ's request: sleep now scores 1.25 points per
+hour (`unit: 0.8`), still in whole points, so 8 hours scores 10 and 7.5 hours
+scores 9. Stored scores were rewritten with `npm run rescore`, which rescores
+every active participant from their raw inputs. Run it after any change to a
+scoring rule in `src/lib/challenges.ts`.
 
 Settings that change scoring — start date, total weeks, active weeks, and
 whether a missing day scores zero — rescore every participant when saved, and

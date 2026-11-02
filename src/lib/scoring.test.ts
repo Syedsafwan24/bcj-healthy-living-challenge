@@ -112,7 +112,7 @@ describe("section 4.8 test vectors", () => {
     expect(s.dailyPercentage).toBe(90.5);
   });
 
-  it("T4 — week 7 mixed inputs → 67 / 80, 83.7500%", () => {
+  it("T4 — week 7 mixed inputs → 69 / 80, 86.2500%", () => {
     const s = scoreEntry(
       SETTINGS,
       {
@@ -131,9 +131,17 @@ describe("section 4.8 test vectors", () => {
       dayInWeek(7),
     );
     expect(s.activeChallenges).toBe(7);
-    expect(s.dailyPoints).toBe(67);
+    // Sleep 7.5 h scores 9 at 1.25 points per hour (O-14).
+    expect(s.dailyPoints).toBe(69);
     expect(s.maxPoints).toBe(80);
-    expect(s.dailyPercentage).toBe(83.75);
+    expect(s.dailyPercentage).toBe(86.25);
+  });
+
+  it("scores sleep at 1.25 points per hour, full marks at 8 hours", () => {
+    const sleep = CHALLENGES.find((c) => c.ref === "C7")!;
+    const pts = (h: number) =>
+      quantitativePoints(h, sleep.unit!, sleep.precision!);
+    expect([6, 7, 7.5, 8, 9, 10].map(pts)).toEqual([7, 8, 9, 10, 10, 10]);
   });
 
   it("T5 — week 10, all nine at full marks, diet 5/5 → 100 / 100, 100.0000%", () => {
